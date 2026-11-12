@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Ballot — a reusable election management platform. Create, schedule, run and certify elections of any type" />
+    <meta name="theme-color" content="#080a09" />
+    <meta name="referrer" content="strict-origin-when-cross-origin" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self'; style-src 'self' https://fonts.googleapis.com; style-src-attr 'unsafe-inline'; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'; frame-src 'none'"
+    />
+    <!--
+      The webfonts, here rather than behind an `@import` in the bundled stylesheet.
+
+      An `@import` cannot start until the file containing it has been downloaded and
+      parsed, and the font files cannot start until that has returned and been parsed
+      in turn — so the sequence was HTML, app CSS, Google CSS, font files, four
+      round trips in series before the serif could be considered. As a `<link>` the
+      request is discovered from this document and runs alongside the app CSS, which
+      removes one round trip from the window in which the fallback is on screen.
+
+      `display=swap` stays. `optional` would remove the swap entirely, but a reader on a
+      cold, slow first visit would then spend the whole visit looking at the fallback,
+      and the serif is this product's most recognisable face. Swapping is the lesser
+      problem now that the fallback occupies the same width.
+    -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400..700&display=swap"
+    />
+    <title>Ballot</title>
+    <script>
+      /*
+        The theme, before the first paint.
+
+        This has to run here rather than in the app. React mounts after the document
+        has already been parsed, and a theme applied at mount is a theme applied
+        after the browser has decided what colour the page is — so a reader who chose
+        light sees a dark page, then a light one, on every load. That flash is worse
+        than no theme switcher at all, and it cannot be fixed from inside the bundle
+        because the bundle is not running yet.
+
+        Three lines that duplicate `src/lib/theme.ts`, deliberately. They cannot
+        import it: a module here is a network request, and the request would defeat
+        the entire purpose. If the storage key ever changes, these three lines are
+        the second thing to update, which is why the key is versioned.
+      */
+      (function () {
+        try {
+          var t = localStorage.getItem('ballot.theme.v1')
+          if (t === 'dark' || t === 'light') {
+            document.documentElement.setAttribute('data-theme', t)
+          }
+        } catch (e) {
+          /* Storage disabled: fall through to the system's preference. */
+        }
+      })()
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
