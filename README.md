@@ -1,15 +1,35 @@
 # Ballot
 
-Ballot is a local election app for universities, clubs, departments, and other groups. It lets organizers set up elections, manage voters, and track results, while voters can verify their identity and cast their votes. Voter identities are stored separately from ballots.
+Ballot is a simple election app for universities, clubs, departments, and other groups. Organizers set up an election and manage the voter list. Voters confirm who they are and cast their vote. Results are tracked and certified in one place.
 
-## What it does
+![Ballot home page](docs/screenshots/home.png)
 
-- Create elections, set schedules, and configure voting rules.
-- Manage voter lists and ballot options.
-- Verify voters and let them preview and cast their ballots.
-- Track turnout, review results, certify outcomes, and view election history.
+## Why Ballot?
 
-## Run locally
+Running a small election by email or spreadsheet is messy. Ballot keeps everything in one app. It also keeps voter identities separate from the ballots, so a vote can't be traced back to the person who cast it.
+
+## Features
+
+- Create elections, set schedules, and choose voting rules
+- Add candidates and ballot options
+- Import and manage voter lists
+- Verify voters with a one-time code before they vote
+- Let voters preview their ballot before casting it
+- Track turnout while voting is open
+- View results, certify outcomes, and browse past elections
+- Keep an audit log of what happened and when
+- Create and restore database backups from the admin console
+
+## Built with
+
+- React 19 and TypeScript
+- Vite
+- Tailwind CSS
+- Recharts for charts
+- SQLite for storage
+- Vitest and Testing Library for tests
+
+## Getting started
 
 You'll need Node.js 22.12 or later and npm.
 
@@ -19,7 +39,7 @@ You'll need Node.js 22.12 or later and npm.
    npm ci
    ```
 
-2. Start Ballot:
+2. Start the app:
 
    ```bash
    npm run dev
@@ -27,19 +47,40 @@ You'll need Node.js 22.12 or later and npm.
 
 3. Open [http://127.0.0.1:8443](http://127.0.0.1:8443).
 
-On first start, Ballot creates a database in the `data/` folder and loads sample elections.
+The first time you run it, Ballot creates a database in the `data/` folder and loads some sample elections.
 
-The development server displays voter verification codes so you can test the full voting process. This is intended for local testing with sample data, not real elections.
-
-To run the app without displaying verification codes, use:
-
-```bash
-npm run dev:secure
-```
+> The dev command shows voter verification codes on screen so you can try the full voting flow. Use it for testing only, never for a real election. To hide the codes, run `npm run dev:secure`.
 
 ## Admin console
 
-Open [http://127.0.0.1:8443/#/admin](http://127.0.0.1:8443/#/admin) and sign in with the demo account:
+Go to [http://127.0.0.1:8443/#/admin](http://127.0.0.1:8443/#/admin) and sign in with the demo account:
 
 - **Username:** `leo.marchetti`
 - **Password:** `Ballot-Demo-2026`
+
+![Ballot admin console](docs/screenshots/admin.png)
+
+## Useful commands
+
+| Command | What it does |
+| --- | --- |
+| `npm run dev` | Start the app with visible verification codes |
+| `npm run dev:secure` | Start the app without visible codes |
+| `npm run build` | Build the app for production |
+| `npm start` | Serve the production build locally |
+| `npm test` | Run the tests |
+| `npm run typecheck` | Check the TypeScript types |
+| `npm run demo:reset` | Reset the sample data |
+| `npm run verify` | Run type checks, tests, and a build |
+
+## Project layout
+
+- `src/voter/` – the voting experience
+- `src/admin/` – the admin console
+- `src/server/` – the API, database, and security code
+- `src/lib/` – shared helpers and types
+- `scripts/` – small helper scripts
+
+## License
+
+Ballot is released under the [MIT License](LICENSE).
