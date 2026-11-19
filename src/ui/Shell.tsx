@@ -177,48 +177,33 @@ export function AuthFrame({
   meta?: ReactNode
 }) {
   return (
-    <div className="auth-frame">
-      <div className="auth-frame-media">
-        <img
-          className="auth-frame-image"
-          src="/ballot.webp"
-          /* The photograph carries the argument for the product, so it gets a real
-             description rather than `alt=""`. The intrinsic size is declared so
-             the browser reserves the box before the bytes arrive. */
-          alt="Three hands putting folded ballots into the slot of a ballot box."
-          width={1086}
-          height={1448}
-          /* Largest contentful paint on the most important page in the product:
-             fetched eagerly and at high priority. */
-          loading="eager"
-          fetchPriority="high"
-          decoding="async"
-        />
-        <div className="auth-frame-scrim" aria-hidden="true" />
-
-        <div className="auth-frame-media-inner">
+    <div className="landing">
+      <header className="landing-bar">
+        <div className="landing-bar-inner">
           <Brand onNavigate={goHome} />
-
-          <div className="auth-frame-caption">
-            <p className="auth-frame-statement">{statement}</p>
-            {meta && <p className="auth-frame-meta">{meta}</p>}
-          </div>
+          <nav className="landing-bar-nav" aria-label="Primary">
+            <a href="#/vote" className="landing-bar-link">Voter portal</a>
+            <a href="#/admin" className="landing-bar-link">Admin console</a>
+            <ThemeToggle />
+          </nav>
         </div>
-      </div>
+      </header>
 
-      <main className="auth-frame-panel">
-        {/* The theme control, and the only control on this half of the screen. It is
-            pinned to the panel's top-right rather than sitting in the form's flow,
-            because the form is the reason this page exists and a preference control
-            in the middle of it would be reading as part of the sign-in. It is here
-            and not over the photograph because the photograph's tokens are pinned to
-            the dark palette for the sake of the text reversed out of it, and a control
-            that ignored the page's own theme would be a strange thing to find there. */}
-        <div className="auth-frame-corner">
-          <ThemeToggle />
+      <main className="landing-main">{children}</main>
+
+      <footer className="landing-foot">
+        <div className="landing-foot-inner">
+          <p className="landing-foot-statement">
+            <span>{statement}</span>
+            {meta && <span className="landing-foot-meta">{meta}</span>}
+          </p>
+          <nav className="site-foot-nav" aria-label="Legal and policy">
+            <a href="#/legal">Legal notices</a>
+            <a href="#/terms">Terms</a>
+            <a href="#/privacy">Privacy</a>
+          </nav>
         </div>
-        <div className="auth-frame-inner">{children}</div>
-      </main>
+      </footer>
     </div>
   )
 }

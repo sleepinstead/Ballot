@@ -34,6 +34,7 @@ import { VoterFlow } from './voter/VoterFlow'
 import { SiteBar, SiteFoot } from './ui/Shell'
 import { LegalPage, isLegalPage, type LegalPageId } from './ui/LegalPages'
 import { Icon } from './ui/Icon'
+import { Onboarding, VOTER_STEPS, replayOnboarding } from './ui/Onboarding'
 import { Alert, Spinner } from './ui/primitives'
 
 type Surface = 'start' | 'voter' | 'admin'
@@ -334,7 +335,11 @@ export default function App() {
         meta={
           <span className="site-bar-meta">
             <Icon name="lock" />
-            Secure voter session
+            <span className="site-bar-secure">Secure voter session</span>
+            <span className="site-bar-sep site-bar-secure">·</span>
+            <button type="button" className="site-bar-link" onClick={() => replayOnboarding('voter')}>
+              Tour
+            </button>
             <span className="site-bar-sep">·</span>
             <button type="button" className="site-bar-link" onClick={() => void exitPortal()}>
               Exit portal
@@ -348,6 +353,7 @@ export default function App() {
       </div>
 
       <SiteFoot sub="Ballot secrecy is structural, not a promise." />
+      <Onboarding id="voter" steps={VOTER_STEPS} />
     </div>,
   )
 }

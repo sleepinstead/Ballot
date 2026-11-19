@@ -1,529 +1,223 @@
 /*
  * ============================================================================
- *  BALLOT — DESIGN SYSTEM
+ *  BALLOT — DESIGN SYSTEM (monochrome)
  * ============================================================================
  *
- * One visual language across every surface: the voter portal, the administrator
- * console and the sign-in screens.
+ * One language across the landing page, onboarding, voter portal and admin
+ * console. Strict black, white and grey: hierarchy comes from weight, size,
+ * surface step and hairlines — never from hue, gradient or glow.
  *
- * The grammar:
- *
- *   · The ground is near-black and warm. Cards are one step off it, separated by
- *     a hairline rather than a shadow. On a dark surface, hierarchy has to come
- *     from border weight, surface step and type scale — a drop shadow reads as
- *     nothing at all once the page behind it is nearly the same colour.
- *   · Inter is the interface and the reader: every sentence, label, control, field,
- *     table cell and caption. It is a variable font, so the weight axis is real
- *     rather than four snapped cuts, and 550 is 550 rather than the nearest cut
- *     the browser could offer. This is the harder brief of the two: it is not
- *     10.5px in a dense audit log that has to hold up.
-*   · Instrument Serif is everything that is *announced*: page titles, card titles,
- *     the figures in a tally, the phrase a voter is meant to sit with. It ships at
- *     one weight, so hierarchy inside it comes from size and colour and never from
- *     bold — the reason a heading here never looks heavier than the sentence under
- *     it. A serif announces; an interface states.
- *   · Machine data — receipt codes, digests, one-time codes, timestamps — is in
- *     Inter like everything else, distinguished by *tabular figures* rather than by
- *     a different typeface. That is not a downgrade: a monospace is the usual way to
- *     stop a column of digits from going ragged, but it is not the only way, and
- *     `font-variant-numeric: tabular-nums` does that job in the face that is
- *     already loaded, without putting a third alphabet on the page. The `.data`
- *     utility sets it.
- *   · Corners are Google's shape scale, not a bespoke ladder: 4 / 8 / 12 / 16 /
- *     full. See the shape tokens for what each one is for.
- *   · Green is the only action colour. Green means healthy, amber means waiting
- *     and red means refused. Those three never take a button.
- *   · Labels are small, uppercase and letterspaced. They name every region,
- *     list and field, and they are what holds the layout together.
- *   · The voter portal carries a faint measured grid. The console does not: an
- *     operator reading a log should not be reading it through a texture.
- *
- * Two typefaces, and both are doing a job the other one cannot. The three that were
- * here — serif, sans, monospace — were three ways of saying "this is a name", "this
- * is a sentence" and "this is data"; the monospace went when tabular figures took
- * its job, and what is left is the pair the product actually distinguishes between:
- * a thing being announced, and a thing being read.
+ *   · Inter for everything. Semi-bold for titles, regular for reading.
+ *   · Ink is the only action colour: primary buttons are solid ink on paper
+ *     (paper on ink in the dark theme). Everything else is a hairline.
+ *   · Status is carried by words and by fill: solid = active / healthy,
+ *     outline = waiting, struck / faint = inert. No red, amber or green.
+ *   · Corners: 8 / 10 / 12 / 16 / 20. Floating surfaces get one soft shadow.
+ *   · Light is the default; dark follows the system or an explicit choice.
  */
 
 @import "tailwindcss";
 
 /* ========================================
-   The fallback for the serif
-   ======================================== */
-
-/*
- * Instrument Serif is very condensed, and the serif it was falling back to was not.
- *
- * The fallback stack used to resolve to Iowan Old Style, which sets 37.9% wider than
- * Instrument Serif does. Measured on the five strings this product actually sets in
- * the serif, at their real sizes: the front door headline went from 546.86px to
- * 734.89px on a cold load and snapped back when the webfont arrived. That is not a
- * subtle reflow — it is the page's largest type visibly breathing outward and then
- * jumping inward, on every hard reload and every first visit, which is what reads as
- * a weird stretch.
- *
- * So the fallback is metric-matched rather than merely close. `size-adjust` rescales
- * a fallback face's advances to the width of the face it stands in for, which makes
- * the swap a change of letterforms rather than a change of layout. The two faces
- * still do not look alike — that is unavoidable, and no amount of metric work hides
- * it — but the lines break in the same places and nothing moves.
- *
- * The value is 84% and it was measured, not guessed. Canvas text metrics put Times at
- * 83.53% (Instrument Serif 37.928 advance per em against Times' 45.404), and a sweep
- * over eleven candidate values against the real rendered strings independently
- * bottomed out at 84% with a worst-case error of 2.17% across all five, down from
- * 21.65%. The two methods agreeing to within half a percent is the reason to believe
- * the number.
- *
- * Times is the fallback rather than Iowan on purpose. Iowan is the closest-looking
- * face and the worst-measured one, and `local('Iowan Old Style')` does not resolve on
- * current Chrome, so an alias naming it silently lands on Times anyway. Times is also
- * the portable choice: it is present on macOS and Windows and stands in for Liberation
- * Serif on Linux, so one number holds the layout steady on all three. Iowan, Georgia
- * and the generic remain in the stack below as the net under this one — if `local()`
- * matches nothing at all, this face fails to load and the reader gets a serif that
- * stretches rather than no serif at all.
- *
- * No ascent or descent override. They would be dead weight here: every serif rule in
- * this stylesheet sets an explicit `line-height`, so the font's own vertical metrics
- * never reach the line box. Verified — the measured line box was 58.75px with and
- * without them, at every size. They are omitted because they would look load-bearing
- * while doing nothing.
- *
- * It is a `local()` alias and not a second download, which is the point: the whole
- * problem is a face that is not there yet, and adding a network request to fix a
- * network problem would be circular.
- */
-@font-face {
-  font-family: 'Instrument Serif Fallback';
-  src: local('Times New Roman'), local('Liberation Serif'), local('Nimbus Roman');
-  size-adjust: 84%;
-}
-
-/* ========================================
-   Tokens
+   Tokens — light (default)
    ======================================== */
 :root {
-  /* Type */
-  /*
-   * Two faces, and the split is what a thing *is*, not how big it is.
-   *
-   * `--font-sans` is Inter and it is everything you read: every sentence, label,
-   * control, field, table cell and caption. It is the interface, and the harder
-   * brief is not the headline — it is 10.5px in a dense audit log, and a face that
-   * looks handsome at 40px can be unreadable at 11.
-   *
-   * `--font-serif` is Instrument Serif and it is everything that is *announced*:
-   * page titles, card titles, the figures in a tally, the phrase a voter is meant to
-   * sit with. It ships at one weight, so hierarchy inside it comes from size and
-   * colour and never from bold — which is a constraint, not an accident, and the
-   * reason a heading in this product never looks heavier than the sentence under it.
-   *
-   * There was a third face in this product until recently and it was a grotesque,
-   * not a serif: Google Sans, which was the interface face and briefly the display
-   * face too. It is gone. Inter is a better interface face than it was, at these
-   * sizes, for a dense tool; and Instrument Serif is a better display face than
-   * Google Sans was, because a serif announces and a grotesque only states.
-   *
-   * `--font-wordmark` is Inter, like the interface — a wordmark is a name, not an
-   * announcement. It keeps its own token because it is set differently from body
-   * text (larger, tighter, 500 rather than 400) and reading `var(--font-wordmark)` in
-   * a rule says "this is the lockup" in a way `var(--font-sans)` does not.
-   *
-   * Nothing should reintroduce a third face. Two is the number of distinctions this
-   * product actually makes: a thing being announced, and a thing being read.
-   */
   --font-sans: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
-  /*
-   * The metric-matched alias sits directly after the real face, so it is what gets
-   * used in the window before Instrument Serif arrives, and the three faces below it
-   * are the net for a machine where none of the `local()` names resolve.
-   */
-  --font-serif: 'Instrument Serif', 'Instrument Serif Fallback', 'Iowan Old Style', 'Times New Roman', Georgia, serif;
-  --font-wordmark: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-serif: var(--font-sans);
+  --font-wordmark: var(--font-sans);
 
-  /* Ground and surfaces — near-black, faintly warm */
-  --bg: #080a09;
-  --bg-sunken: #0a0d0b;
-  --card: #0f1311;
-  --card-soft: #141917;
+  --bg: #fafafa;
+  --bg-sunken: #f3f3f3;
+  --card: #ffffff;
+  --card-soft: #f6f6f6;
 
-  --grid-line: rgb(var(--overlay) / 0.021);
+  --grid-line: transparent;
   --grid-size: 58px;
 
-  /* Ink */
-  --ink: #f2f1ec;
-  --ink-2: #ced2cb;
-  --muted: #8d958e;
-  --muted-2: #626a64;
+  --ink: #0f0f0f;
+  --ink-2: #333333;
+  --muted: #6b6b6b;
+  --muted-2: #767676;
 
-  /* Hairlines */
-  --border: rgb(var(--overlay) / 0.082);
-  --border-soft: rgb(var(--overlay) / 0.048);
-  --border-strong: rgb(var(--overlay) / 0.16);
+  --border: rgb(var(--overlay) / 0.1);
+  --border-soft: rgb(var(--overlay) / 0.06);
+  --border-strong: rgb(var(--overlay) / 0.2);
 
-  /* Chrome. Once the whole page is dark these are not "navy" — they are the
-     deepest surfaces: the sidebar, the header band, the sunken wells. */
-  /*
-   * The console's sticky bar, as a translucent ground rather than a flat colour, so
-   * the content scrolling underneath it blurs through instead of being covered. It
-   * carries its own token because it is neither `--bg` nor `--navy`: it is the ground
-   * at 90% over whatever is passing beneath, which is a third thing.
-   */
-  --bar: rgba(9, 12, 10, 0.9);
-  --navy: #090c0a;
-  --navy-2: #101513;
-  --navy-3: #18201b;
-  --navy-line: rgb(var(--overlay) / 0.075);
-  --navy-line-soft: rgb(var(--overlay) / 0.045);
-  --navy-text: #8d958e;
-  --navy-text-strong: #f2f1ec;
+  --bar: rgba(250, 250, 250, 0.92);
+  --navy: #fafafa;
+  --navy-2: #f3f3f3;
+  --navy-3: #ececec;
+  --navy-line: rgb(var(--overlay) / 0.1);
+  --navy-line-soft: rgb(var(--overlay) / 0.06);
+  --navy-text: #6b6b6b;
+  --navy-text-strong: #0f0f0f;
 
-  /* Green — the accent and the only action colour */
-  --green: #7ee0a8;
-  --green-hover: #98ebba;
-  --green-press: #6ed199;
-  --green-ink: #0b1a12;
-  --green-text: #a8ecc6;
-  --green-line: var(--green-line);
-  --green-soft: var(--green-soft);
-  --green-soft-2: var(--green-soft-2);
-  --green-glow: 0 0 22px -6px var(--green-line);
+  /* The action colour is ink. The old names stay so 400 call sites keep working. */
+  --green: #0f0f0f;
+  --green-hover: #2b2b2b;
+  --green-press: #000000;
+  --green-ink: #ffffff;
+  --green-text: #0f0f0f;
+  --green-line: rgb(var(--overlay) / 0.3);
+  --green-soft: rgb(var(--overlay) / 0.06);
+  --green-soft-2: rgb(var(--overlay) / 0.12);
+  --green-glow: none;
 
-  /* Amber — waiting */
-  --amber: #e3b551;
-  --amber-text: #e8c377;
-  --amber-soft: var(--amber-soft);
-  --amber-soft-2: var(--amber-soft-2);
-  --amber-ink: #e8c377;
+  --amber: #525252;
+  --amber-text: #404040;
+  --amber-soft: rgb(var(--overlay) / 0.05);
+  --amber-soft-2: rgb(var(--overlay) / 0.12);
+  --amber-ink: #404040;
 
-  /* Red — refused */
-  --red: #e2705f;
-  --red-text: #eb8b7c;
-  --red-soft: var(--red-soft);
-  --red-soft-2: var(--red-soft-2);
-  --red-ink: #eb8b7c;
+  --red: #0f0f0f;
+  --red-text: #0f0f0f;
+  --red-soft: rgb(var(--overlay) / 0.07);
+  --red-soft-2: rgb(var(--overlay) / 0.2);
+  --red-ink: #0f0f0f;
 
-  /* Orange — needs a person */
-  --orange: #dd9152;
-  --orange-soft: var(--orange-soft);
-  --orange-ink: #e5a468;
+  --orange: #525252;
+  --orange-soft: rgb(var(--overlay) / 0.05);
+  --orange-ink: #404040;
 
-  /* Neutral — archived, draft, inert */
   --slate-soft: rgb(var(--overlay) / 0.05);
-  --slate-ink: #9aa39c;
+  --slate-ink: #6b6b6b;
 
-  /* Violet — voter-originated records in the audit trail */
-  --violet-soft: var(--violet-soft);
-  --violet-soft-2: var(--violet-soft-2);
-  --violet-ink: #b9a1fb;
+  --violet-soft: rgb(var(--overlay) / 0.05);
+  --violet-soft-2: rgb(var(--overlay) / 0.12);
+  --violet-ink: #525252;
 
-  /*
-   * Accent aliases.
-   *
-   * Components were written against a blue accent. Rather than hunt the accent
-   * name through four hundred call sites, the old name resolves to the new one
-   * here — one line, and every accent-coloured control in the product turns
-   * green at the same instant.
-   */
-  --blue: #7ee0a8;
-  --blue-hover: #98ebba;
-  --blue-press: #6ed199;
+  --blue: var(--green);
+  --blue-hover: var(--green-hover);
+  --blue-press: var(--green-press);
   --blue-soft: var(--green-soft);
   --blue-soft-2: var(--green-soft-2);
-  --blue-ink: #a8ecc6;
+  --blue-ink: var(--green-text);
 
-  /*
-   * Shape — Google's corner scale.
-   *
-   * The five tokens are Google's, not ours: extra small, small, medium, large and
-   * full, from the Labs shape scale. They replace an arbitrary 5/7/10/14 ladder,
-   * which is a shape system nobody could reason about — nothing said why a card was
-   * 14 and a tag was 5, and the two were never more than 4px apart, so nothing was
-   * being distinguished either.
-   *
-   * These are spaced far enough apart to mean something. A tag at 4 and a card at
-   * 16 are visibly different objects; a tag at 5 and a card at 14 were the same
-   * object with a different class name.
-   *
-   *   extra small  4   tight controls, a close button, a 6px dot
-   *   small        8   tags, chips, avatars, small callouts
-   *   medium      12   fields, icon tiles, tabs, code blocks, list rows
-   *   large       16   inner cards, wells, tables, menus, nav rows, alerts
-   *   extra large 28   cards, panels, modals — the outermost boxes
-   *   full       9999   buttons, badges, switches, meters, anything pressable
-   *
-   * Every one of these is referenced by name, so the scale is the one thing deciding
-   * how round anything in the product is, and a hardcoded radius anywhere is a bug.
-   *
-   * The extra-large step is new, and it is the one that changed the most. It is also
-   * the reason this scale is a scale and not a mood: cards were sitting on `large`
-   * at 16px, which is a rounding, not a shape, and the largest objects in the product
-   * were the least rounded things in it.
-   *
-   * **Fields are not buttons, and they should not be shaped like them.** They were
-   * tried at `full`, matching the buttons directly below them, on the argument that
-   * two things you reach for should not be told apart by shape. A 44px field at 9999px
-   * is a lozenge: at a quarter of the width it stops reading as a box you type into
-   * and starts reading as a capsule, and the rounded ends eat the padding the
-   * placeholder needs. So fields sit on `medium` at 12px — visibly rounded, clearly a
-   * field, and a step above the 8px they were at before.
-   *
-   * The buttons are pills and the fields are not, and that was defended as a
-   * principled difference rather than an inconsistency: a button is a thing you press
-   * once, a field is a surface you sit and read. It did not survive being looked at.
-   * On a short, wide button a pill is a *shape*, and when every pressable thing in
-   * the product is the same lozenge the pill stops reading as a deliberate choice and
-   * starts reading as the only shape the designer knew. It also fought the cards,
-   * which were the most rounded objects on the page at 28px — so the biggest box was
-   * rounder than the things inside it, and the two ways in, which are tall rows of
-   * copy, read as capsules rather than as rectangles with soft corners.
-   *
-   * Buttons and fields both sit on `medium` at 12px now, and the ladder is: 8px for
-   * small controls, 12px for buttons and fields, 16px for the tall cards, 28px for the
-   * outermost boxes. What stays a pill is what genuinely is one — the 23px toggle
-   * track, status badges, count chips, and the 4-to-6px meter and tally bars, where a
-   * full round is the only radius that fits the height. A pill suits a thing whose
-   * height is its radius. It does not suit a rectangle.
-   */
-
-  /*
-   * The accent opacity ramp, named by its alpha.
-   *
-   * Eighteen rules reach for a specific accent at a specific strength: a card wash
-   * at 5.5%, a dashed receipt border at 42%, a hover fill at 18%. Those were inline
-   * `rgba(126, 224, 168, 0.055)` values, which meant a mint green hardcoded into a
-   * rule that had to work on paper too.
-   *
-   * They are named by alpha rather than by role because the roles genuinely do not
-   * line up: 0.18 is a hover fill on one button and a critical-severity ring on
-   * another, and 0.05 is a card gradient on three different accents. A semantic name
-   * would have been a guess about intent in at least one of those places, and a
-   * wrong guess is worse than an honest number. What a theme needs is to restate one
-   * step of the ramp without reasoning about what it is for, and an alpha can do
-   * that; a name cannot.
-   *
-   * The light values are all *higher* than the dark ones, which is the opposite of
-   * the instinct. A dark accent at 5% over near-black is a hint you can barely see
-   * and do not need to; the same dark accent at 5% over paper is nearly invisible,
-   * because paper is already bright and the thing being asked for is a tint. So the
-   * washes move up, and the steps that carry an edge or a fill move up most.
-   */
-  --green-a0014: rgba(126, 224, 168, 0.014);
-  --green-a0035: rgba(126, 224, 168, 0.035);
-  --green-a0055: rgba(126, 224, 168, 0.055);
-  --green-a0075: rgba(126, 224, 168, 0.075);
-  --green-a013: rgba(126, 224, 168, 0.13);
-  --green-a026: rgba(126, 224, 168, 0.26);
-  --amber-a0045: rgba(227, 181, 81, 0.045);
-  --amber-a005: rgba(227, 181, 81, 0.05);
-  --amber-a014: rgba(227, 181, 81, 0.14);
-  --amber-a018: rgba(227, 181, 81, 0.18);
-  --amber-a042: rgba(227, 181, 81, 0.42);
-  --amber-a044: rgba(227, 181, 81, 0.44);
-  --amber-a06: rgba(227, 181, 81, 0.6);
-  --orange-a026: rgba(221, 145, 82, 0.26);
-  --red-a005: rgba(226, 112, 95, 0.05);
-  --red-a014: rgba(226, 112, 95, 0.14);
-  --red-a018: rgba(226, 112, 95, 0.18);
-  --red-a044: rgba(226, 112, 95, 0.44);
+  --green-a0014: rgb(var(--overlay) / 0.015);
+  --green-a0035: rgb(var(--overlay) / 0.025);
+  --green-a0055: rgb(var(--overlay) / 0.035);
+  --green-a0075: rgb(var(--overlay) / 0.045);
+  --green-a013: rgb(var(--overlay) / 0.1);
+  --green-a026: rgb(var(--overlay) / 0.18);
+  --amber-a0045: rgb(var(--overlay) / 0.03);
+  --amber-a005: rgb(var(--overlay) / 0.03);
+  --amber-a014: rgb(var(--overlay) / 0.08);
+  --amber-a018: rgb(var(--overlay) / 0.1);
+  --amber-a042: rgb(var(--overlay) / 0.25);
+  --amber-a044: rgb(var(--overlay) / 0.25);
+  --amber-a06: rgb(var(--overlay) / 0.35);
+  --orange-a026: rgb(var(--overlay) / 0.18);
+  --red-a005: rgb(var(--overlay) / 0.03);
+  --red-a014: rgb(var(--overlay) / 0.08);
+  --red-a018: rgb(var(--overlay) / 0.1);
+  --red-a044: rgb(var(--overlay) / 0.3);
 
   --r-xs: 4px;
   --r-sm: 8px;
-  --r-md: 12px;
-  --r-lg: 16px;
-  --r-xl: 28px;
+  --r-md: 10px;
+  --r-lg: 14px;
+  --r-xl: 20px;
   --r-pill: 9999px;
 
-  /*
-   * The page measure.
-   *
-   * Two values, and the second is what makes the first one safe. `--page-max` is
-   * the width of the *content*; `--page-gutter` is the minimum breathing room
-   * between that content and the viewport edge. Every full-width surface is
-   * therefore the same box: `calc(--page-max + 2 * --page-gutter)` wide, centred,
-   * with the gutter as padding inside it.
-   *
-   * Deriving the outer box from the gutter is the whole point. When each surface
-   * carried its own padding and its own cap, the header and the content column
-   * agreed only while the viewport was narrower than the cap — past that they
-   * drifted apart by exactly the difference between their paddings, which is how
-   * a page ends up with a wordmark 24px left of the cards it sits above. One
-   * formula, applied everywhere, cannot drift.
-   *
-   * The measure is generous because cards are not prose: four of them across a
-   * laptop, five across a desktop, and a sixth on a wide one. A narrower column
-   * strands them in the middle of an empty page, which is the one layout failure
-   * no amount of good typography recovers from.
-   */
-  --page-max: 1920px;
-  --page-gutter: 40px;
-  /* The single-column stages keep their own, much narrower measure. Same
-     gutter arithmetic, so they still align with the header and footer. */
-  --narrow-max: 900px;
+  --page-max: 1280px;
+  --page-gutter: 32px;
+  --narrow-max: 880px;
 
-  /* Depth. On a dark ground a shadow only has to separate two surfaces, so
-     these stay shallow and tinted to the ground rather than to grey. */
-  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.4);
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35);
-  --shadow-md: 0 16px 36px -16px rgba(0, 0, 0, 0.8);
-  --shadow-lg: 0 44px 90px -36px rgba(0, 0, 0, 0.85);
-  --shadow-nav: 0 1px 0 rgb(var(--overlay) / 0.03);
+  --shadow-xs: 0 1px 2px rgb(0 0 0 / 0.05);
+  --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.05);
+  --shadow-md: 0 8px 24px -8px rgb(0 0 0 / 0.14);
+  --shadow-lg: 0 24px 56px -16px rgb(0 0 0 / 0.22);
+  --shadow-nav: none;
 
-  --ring: 0 0 0 3px var(--green-soft-2);
-  --ring-soft: 0 0 0 3px var(--green-a013);
+  --ring: 0 0 0 3px rgb(var(--overlay) / 0.14);
+  --ring-soft: 0 0 0 3px rgb(var(--overlay) / 0.08);
 
   --ease: 0.18s cubic-bezier(0.2, 0, 0.2, 1);
 
-/*
-   * The overlay colour. One variable, and it is what makes the light theme
-   * possible.
-   *
-   * Fifty-odd rules in this file are not opaque colours: they are a translucent
-   * white laid over whatever is behind them — a hairline border, a hover fill, a
-   * grid line, the wash on the two ways in. Written as `rgba(255, 255, 255, x)`
-   * those are correct on a near-black ground and invisible on a light one, because
-   * white on white is nothing. There were two ways out: give every alpha its own
-   * token and restate all of them per theme, or change what the white *is*.
-   *
-   * This is the second way. A dark ground is overlaid with white and a light ground
-   * with black, so `--overlay` is the only value a theme has to change for every
-   * translucent fill in the product to stay visible, and the per-alpha tuning that
-   * remains is a handful of overrides rather than fifty.
-   *
-   * Space-separated components rather than a colour, so the alpha attaches at the
-   * point of use: `rgb(var(--overlay) / 0.08)`.
-   */
-  --overlay: 255 255 255;
+  /* The overlay colour: black over paper, white over ink. */
+  --overlay: 0 0 0;
 }
 
 /* ========================================
-   The light theme
+   Tokens — dark
    ======================================== */
-
-/*
- * Light is not this theme with its colours inverted, and the accents are where that
- * becomes obvious. A mint green chosen to glow against near-black — `#7ee0a8` — is
- * close to invisible on paper. It is a light colour carrying a light theme's
- * contrast requirement, so it needs roughly a quarter of its previous lightness
- * before it reads as green at all, let alone as an accessible green. Amber, red and
- * orange go the same way, and every `-soft` wash needs both a darker base and a
- * higher alpha, because a 10% mint wash on white is not a tint, it is nothing.
- *
- * So each accent gets a light value chosen against `#f7f6f2` rather than derived by
- * maths from the dark one. Green is the accent that carries real meaning here —
- * certified, open, complete, and the `--green-ink` set on a filled button — so it is
- * the one that had to pass rather than merely look present.
- *
- * The ground keeps its warmth. The dark theme is not neutral grey; it is a faintly
- * warm near-black with a green cast, and a cold white beside it reads as a different
- * product. `#f7f6f2` is paper, not a screen.
- *
- * Overlays go to black at the *same* alphas. Black-at-8% on paper and white-at-8%
- * on near-black are close enough in perceived weight that the fifty-odd rules now
- * reading `rgb(var(--overlay) / x)` needed almost no retuning, which is the return
- * on doing this with one variable rather than fifty tokens. The shadows are the
- * exception: a shadow tuned to separate two dark surfaces is far too heavy on white.
- */
-:root[data-theme='light'] {
-  --overlay: 0 0 0;
-
-  /* Ground and surfaces — warm paper */
-  --bg: #f7f6f2;
-  --bg-sunken: #efeee8;
-  --card: #ffffff;
-  --card-soft: #f2f1ec;
-
-  --ink: #191c19;
-  --ink-2: #3d443e;
-  --muted: #5c655f;
-  --muted-2: #6f7771;
-
-  /* The console's sidebar, which is a surface rather than a ground */
-  /* Near-opaque white rather than a tint of the ground. A translucent dark bar over
-     paper would be grey, not light, and the console's title sits on it. */
-  --bar: rgba(255, 255, 255, 0.88);
-  --navy: #ffffff;
-  --navy-2: #f4f3ee;
-  --navy-3: #e8e7e1;
-  --navy-line: rgb(var(--overlay) / 0.075);
-  --navy-line-soft: rgb(var(--overlay) / 0.045);
-  --navy-text: #5c655f;
-  --navy-text-strong: #191c19;
-
-  /* Green carries the product's meaning, so it is the accent that had to pass
-     rather than merely look reasonable. */
-  --green: #17794c;
-  --green-hover: #126840;
-  --green-press: #0e5834;
-  --green-ink: #ffffff;
-  --green-text: #0f6b41;
-  --green-line: rgb(23 121 76 / 0.34);
-  --green-soft: rgb(23 121 76 / 0.1);
-  --green-soft-2: rgb(23 121 76 / 0.2);
-
-  --amber: #a9741a;
-  --amber-text: #8a5e12;
-  --amber-soft: rgb(169 116 26 / 0.11);
-  --amber-soft-2: rgb(169 116 26 / 0.26);
-  --amber-ink: #6d4a0d;
-
-  --red: #b8402c;
-  --red-text: #a33523;
-  --red-soft: rgb(184 64 44 / 0.1);
-  --red-soft-2: rgb(184 64 44 / 0.28);
-  --red-ink: #8f2c1d;
-
-  --orange: #a75c1e;
-  --orange-soft: rgb(167 92 30 / 0.11);
-  --orange-ink: #8a4a16;
-
-  --slate-soft: rgb(var(--overlay) / 0.05);
-  --slate-ink: #4d554f;
-  --violet-soft: rgb(107 72 201 / 0.11);
-  --violet-soft-2: rgb(107 72 201 / 0.28);
-  --violet-ink: #6b48c9;
-
-  /* Blue is an alias for green in this product, not a second colour, so it moves
-     with it rather than becoming a blue that means something else. */
-  --blue: #17794c;
-  --blue-hover: #126840;
-  --blue-press: #0e5834;
-  --blue-soft: rgb(23 121 76 / 0.1);
-  --blue-soft-2: rgb(23 121 76 / 0.2);
-  --blue-ink: #0f6b41;
-
-  /* Depth. The dark shadows exist to separate two dark surfaces; on paper the same
-     weight reads as a bruise, so they lose most of their opacity and the large ones
-     lose most of their spread. */
-  --shadow-xs: 0 1px 2px rgb(0 0 0 / 0.06);
-  --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.05);
-  --shadow-md: 0 12px 28px -18px rgb(0 0 0 / 0.28);
-  --shadow-lg: 0 32px 64px -32px rgb(0 0 0 / 0.3);
-
-  --ring: 0 0 0 3px rgb(23 121 76 / 0.28);
-  --ring-soft: 0 0 0 3px rgb(23 121 76 / 0.18);
-  --green-a0014: rgb(23 121 76 / 0.03);
-  --green-a0035: rgb(23 121 76 / 0.05);
-  --green-a0055: rgb(23 121 76 / 0.075);
-  --green-a0075: rgb(23 121 76 / 0.1);
-  --green-a013: rgb(23 121 76 / 0.18);
-  --green-a026: rgb(23 121 76 / 0.3);
-  --amber-a0045: rgb(169 116 26 / 0.06);
-  --amber-a005: rgb(169 116 26 / 0.07);
-  --amber-a014: rgb(169 116 26 / 0.16);
-  --amber-a018: rgb(169 116 26 / 0.2);
-  --amber-a042: rgb(169 116 26 / 0.45);
-  --amber-a044: rgb(169 116 26 / 0.5);
-  --amber-a06: rgb(169 116 26 / 0.65);
-  --orange-a026: rgb(167 92 30 / 0.3);
-  --red-a005: rgb(184 64 44 / 0.06);
-  --red-a014: rgb(184 64 44 / 0.16);
-  --red-a018: rgb(184 64 44 / 0.2);
-  --red-a044: rgb(184 64 44 / 0.5);
-
-  --green-glow: none;
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) { color-scheme: dark; }
+  :root:not([data-theme='light']) {
+    --overlay: 255 255 255;
+    --bg: #0a0a0a;
+    --bg-sunken: #070707;
+    --card: #121212;
+    --card-soft: #1a1a1a;
+    --ink: #fafafa;
+    --ink-2: #d4d4d4;
+    --muted: #a1a1a1;
+    --muted-2: #8a8a8a;
+    --bar: rgba(10, 10, 10, 0.9);
+    --navy: #0a0a0a;
+    --navy-2: #121212;
+    --navy-3: #1a1a1a;
+    --navy-text: #a1a1a1;
+    --navy-text-strong: #fafafa;
+    --green: #fafafa;
+    --green-hover: #e0e0e0;
+    --green-press: #ffffff;
+    --green-ink: #0a0a0a;
+    --green-text: #fafafa;
+    --amber: #a1a1a1;
+    --amber-text: #d4d4d4;
+    --amber-ink: #d4d4d4;
+    --red: #fafafa;
+    --red-text: #fafafa;
+    --red-ink: #fafafa;
+    --orange: #a1a1a1;
+    --orange-ink: #d4d4d4;
+    --slate-ink: #a1a1a1;
+    --violet-ink: #a1a1a1;
+    --shadow-xs: 0 1px 2px rgb(0 0 0 / 0.5);
+    --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.5);
+    --shadow-md: 0 12px 28px -10px rgb(0 0 0 / 0.7);
+    --shadow-lg: 0 32px 64px -16px rgb(0 0 0 / 0.8);
+  }
 }
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --overlay: 255 255 255;
+  --bg: #0a0a0a;
+  --bg-sunken: #070707;
+  --card: #121212;
+  --card-soft: #1a1a1a;
+  --ink: #fafafa;
+  --ink-2: #d4d4d4;
+  --muted: #a1a1a1;
+  --muted-2: #8a8a8a;
+  --bar: rgba(10, 10, 10, 0.9);
+  --navy: #0a0a0a;
+  --navy-2: #121212;
+  --navy-3: #1a1a1a;
+  --navy-text: #a1a1a1;
+  --navy-text-strong: #fafafa;
+  --green: #fafafa;
+  --green-hover: #e0e0e0;
+  --green-press: #ffffff;
+  --green-ink: #0a0a0a;
+  --green-text: #fafafa;
+  --amber: #a1a1a1;
+  --amber-text: #d4d4d4;
+  --amber-ink: #d4d4d4;
+  --red: #fafafa;
+  --red-text: #fafafa;
+  --red-ink: #fafafa;
+  --orange: #a1a1a1;
+  --orange-ink: #d4d4d4;
+  --slate-ink: #a1a1a1;
+  --violet-ink: #a1a1a1;
+  --shadow-xs: 0 1px 2px rgb(0 0 0 / 0.5);
+  --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.5);
+  --shadow-md: 0 12px 28px -10px rgb(0 0 0 / 0.7);
+  --shadow-lg: 0 32px 64px -16px rgb(0 0 0 / 0.8);
+}
+:root[data-theme='light'] { color-scheme: light; }
 
 /* ========================================
    Reset
@@ -565,7 +259,6 @@ html {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
-  color-scheme: dark;
 }
 
 body {
@@ -587,7 +280,7 @@ button, input, select, textarea {
 
 a { color: inherit; }
 
-::selection { background: var(--green-a026); color: #fff; }
+::selection { background: var(--green-a026); color: var(--ink); }
 
 /* Focus is a green ring rather than an outline: it has to be visible against
    both the near-black ground and a green-filled button. */
@@ -1216,7 +909,7 @@ a { color: inherit; }
 .btn-confirm-danger {
   background: var(--red) !important;
   border-color: var(--red) !important;
-  color: #180a07 !important;
+  color: var(--ink) !important;
 }
 .btn-confirm-danger:hover:not(:disabled) { background: var(--red-text) !important; }
 
@@ -4885,7 +4578,10 @@ th[aria-sort="ascending"] .table-sort-mark svg { transform: rotate(180deg); }
   .approval-waiting-spinner,
   .loading-spinner,
   .surface--in,
-  .surface--back {
+  .surface--back,
+  .onboarding,
+  .user-menu-panel,
+  .cmdk-overlay {
     animation: none !important;
   }
 }
@@ -4988,4 +4684,445 @@ th[aria-sort="ascending"] .table-sort-mark svg { transform: rotate(180deg); }
 @keyframes surface-in {
   from { opacity: 0; transform: translateY(var(--surface-rise)); }
   to { opacity: 1; transform: none; }
+}
+
+/* ============================================================================
+   Monochrome v2
+   ----------------------------------------------------------------------------
+   The final layer. Everything above was re-toned through the tokens; this block
+   is where the shapes change: no sidebar, no photograph, no gradients, one
+   sans-serif, and the new landing, onboarding and command surfaces.
+   ============================================================================ */
+
+body { font-size: 14px; line-height: 1.55; letter-spacing: -0.003em; }
+
+/* ---- Typography: one family, semi-bold titles ---- */
+.page-title,
+.card-title,
+.control-head-text h1,
+.workspace-title h1,
+.election-list-header h1,
+.ballot-heading h2,
+.focus-head h1,
+.focus-head h2,
+.confirmed-title,
+.auth-card h1,
+.auth-card h2,
+.auth-hero h1,
+.modal-content h2,
+.legal-inner h2,
+.entry-about-headline,
+.stat-value,
+.kpi-value,
+.funnel-row-tally strong {
+  font-family: var(--font-sans);
+  font-weight: 600;
+  letter-spacing: -0.025em;
+}
+.page-title, .control-head-text h1, .workspace-title h1, .election-list-header h1 { font-size: 30px; line-height: 1.15; }
+.card-title { font-size: 17px; letter-spacing: -0.015em; }
+.eyebrow, .preview-meta-label { font-size: 11.5px; letter-spacing: 0.02em; text-transform: none; font-weight: 500; color: var(--muted); }
+.eyebrow-blue { color: var(--muted); }
+
+/* ---- Strip every gradient, glow and photograph ---- */
+.control-card-warn,
+.control-card-danger,
+.attention-card,
+.control-card-accent { background: var(--card); }
+.auth-frame-media, .auth-frame-scrim, .auth-frame-image { display: none; }
+
+/* ---- Buttons: ink on paper, hairline secondary ---- */
+.btn-primary, .btn-confirm, .btn-submit-ballot {
+  height: 40px;
+  padding: 0 18px;
+  border-radius: var(--r-md);
+  font-weight: 550;
+  font-size: 13.5px;
+  box-shadow: none;
+}
+.btn-primary.btn-lg { height: 46px; font-size: 14.5px; }
+.btn-outline, .btn-cancel, .btn-secondary, .btn-navy {
+  background: var(--card);
+  color: var(--ink);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-md);
+  box-shadow: var(--shadow-xs);
+  height: 40px;
+  padding: 0 16px;
+  font-weight: 550;
+  font-size: 13.5px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: background var(--ease), border-color var(--ease);
+}
+.btn-outline:hover:not(:disabled), .btn-cancel:hover:not(:disabled), .btn-secondary:hover:not(:disabled), .btn-navy:hover:not(:disabled) {
+  background: var(--card-soft);
+  border-color: var(--border-strong);
+}
+.btn-outline svg, .btn-cancel svg, .btn-secondary svg { width: 15px; height: 15px; }
+.btn-danger, .btn-confirm-danger, .btn-lifecycle-danger {
+  background: var(--card);
+  color: var(--ink);
+  border: 1px solid var(--ink);
+  box-shadow: none;
+}
+.btn-icon { border-radius: var(--r-md); position: relative; }
+
+/* ---- Surfaces: white cards, hairline edge, no shadow ---- */
+.control-card, .panel, .focus-card, .focus-card-lg, .auth-card, .stat-card, .kpi, .election-card, .lifecycle,
+.tally-card, .table-block, .roster, .results-summary, .check-summary, .modal-content {
+  border-radius: var(--r-xl);
+}
+
+/* ============================================================================
+   Landing
+   ============================================================================ */
+.landing { min-height: 100vh; display: flex; flex-direction: column; background: var(--bg); }
+.landing-bar { position: sticky; top: 0; z-index: 30; background: var(--bar); backdrop-filter: saturate(1.4) blur(10px); border-bottom: 1px solid var(--border-soft); }
+.landing-bar-inner, .landing-foot-inner {
+  max-width: calc(var(--page-max) + var(--page-gutter) * 2);
+  margin: 0 auto;
+  padding: 0 var(--page-gutter);
+  display: flex; align-items: center; justify-content: space-between; gap: 20px;
+}
+.landing-bar-inner { min-height: 64px; }
+.landing-bar-nav { display: flex; align-items: center; gap: 4px; }
+.landing-bar-link {
+  font-size: 13.5px; font-weight: 500; color: var(--muted); text-decoration: none;
+  padding: 8px 12px; border-radius: var(--r-md); transition: color var(--ease), background var(--ease);
+}
+.landing-bar-link:hover { color: var(--ink); background: var(--green-soft); }
+.landing-main {
+  flex: 1; width: 100%;
+  max-width: calc(var(--page-max) + var(--page-gutter) * 2);
+  margin: 0 auto; padding: 0 var(--page-gutter);
+}
+.landing-foot { border-top: 1px solid var(--border-soft); margin-top: 72px; }
+.landing-foot-inner { padding-top: 28px; padding-bottom: 28px; flex-wrap: wrap; }
+.landing-foot-statement { display: flex; gap: 14px; flex-wrap: wrap; font-size: 13px; color: var(--muted); }
+.landing-foot-meta { color: var(--muted-2); }
+.site-foot-nav a { color: var(--muted); }
+.site-foot-nav a:hover { color: var(--ink); border-bottom-color: var(--ink); }
+
+.auth-hero {
+  display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
+  gap: 56px; align-items: center;
+  padding: 88px 0 56px;
+}
+.auth-hero-copy { display: flex; flex-direction: column; align-items: flex-start; }
+.landing-pill {
+  display: inline-flex; align-items: center; gap: 8px;
+  height: 30px; padding: 0 12px 0 10px;
+  border: 1px solid var(--border); border-radius: var(--r-pill);
+  background: var(--card); font-size: 12.5px; font-weight: 500; color: var(--ink-2);
+}
+.landing-pill-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--ink); }
+.auth-hero h1 {
+  margin: 22px 0 0;
+  font-size: clamp(40px, 5.6vw, 68px);
+  line-height: 1.02; letter-spacing: -0.04em; font-weight: 600; color: var(--ink);
+}
+.auth-hero h1 .accent { display: block; color: var(--muted-2); }
+.auth-hero-lede { margin-top: 24px; font-size: 17px; line-height: 1.6; color: var(--muted); max-width: 52ch; }
+.auth-hero-rule { display: none; }
+
+.landing-preview { position: relative; min-height: 500px; }
+.lp-card {
+  position: absolute; background: var(--card); border: 1px solid var(--border);
+  border-radius: var(--r-xl); box-shadow: var(--shadow-md); padding: 20px; font-size: 13px;
+}
+.lp-ballot { top: 0; left: 0; right: 12%; padding-bottom: 28px; }
+.lp-receipt { bottom: 0; right: 0; width: 64%; }
+.lp-label { display: block; font-size: 11.5px; color: var(--muted); font-weight: 500; margin-bottom: 8px; }
+.lp-title { font-size: 16px; font-weight: 600; letter-spacing: -0.015em; margin-bottom: 14px; }
+.lp-option {
+  display: flex; align-items: center; gap: 10px; padding: 10px 12px; margin-top: 8px;
+  border: 1px solid var(--border); border-radius: var(--r-md); color: var(--ink-2);
+}
+.lp-option.lp-on { border-color: var(--ink); color: var(--ink); background: var(--card-soft); }
+.lp-radio { width: 14px; height: 14px; border-radius: 50%; border: 1.5px solid var(--border-strong); flex: none; }
+.lp-on .lp-radio { border-color: var(--ink); background: var(--ink); box-shadow: inset 0 0 0 2.5px var(--card); }
+.lp-btn { margin-top: 14px; height: 38px; border-radius: var(--r-md); background: var(--ink); color: var(--bg); display: grid; place-items: center; font-weight: 550; }
+.lp-hash { font-size: 17px; font-weight: 600; letter-spacing: 0.04em; font-variant-numeric: tabular-nums; }
+.lp-meter { height: 6px; border-radius: 6px; background: var(--green-soft-2); margin: 14px 0 8px; overflow: hidden; }
+.lp-meter span { display: block; width: 68%; height: 100%; background: var(--ink); }
+.lp-meta { display: flex; justify-content: space-between; color: var(--muted); font-size: 12px; }
+
+.landing-section { padding: 32px 0; }
+.landing-section > .eyebrow { margin-bottom: 18px; }
+
+.entry-ways { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.entry-way {
+  display: flex; align-items: center; gap: 16px; width: 100%; text-align: left; cursor: pointer;
+  padding: 22px; background: var(--card); border: 1px solid var(--border); border-radius: var(--r-xl);
+  transition: border-color var(--ease), background var(--ease);
+}
+.entry-way:hover { border-color: var(--ink); background: var(--card); transform: none; }
+.entry-way:hover .entry-way-label { color: var(--ink); }
+.entry-way:hover .entry-way-arrow { transform: none; background: var(--ink); color: var(--bg); }
+.entry-way-icon, .entry-way-arrow {
+  display: grid; place-items: center; width: 44px; height: 44px; flex: none;
+  border-radius: var(--r-md); background: var(--card-soft); border: 1px solid var(--border-soft); color: var(--ink);
+}
+.entry-way-arrow { width: 36px; height: 36px; border-radius: 50%; margin-left: auto; transition: background var(--ease), color var(--ease); }
+.entry-way-icon svg { width: 20px; height: 20px; }
+.entry-way-arrow svg { width: 16px; height: 16px; }
+.entry-way-label { font-size: 16px; font-weight: 600; letter-spacing: -0.015em; color: var(--ink); }
+.entry-way-detail { font-size: 13.5px; color: var(--muted); margin-top: 3px; }
+
+.landing-steps { list-style: none; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
+.landing-step { padding: 22px; border: 1px solid var(--border); border-radius: var(--r-xl); background: var(--card); }
+.landing-step-n { font-size: 12px; font-weight: 600; color: var(--muted-2); font-variant-numeric: tabular-nums; }
+.landing-step h3 { font-size: 16px; font-weight: 600; letter-spacing: -0.015em; margin: 18px 0 6px; }
+.landing-step p { font-size: 13.5px; color: var(--muted); line-height: 1.55; }
+
+.entry-about { border-top: 1px solid var(--border-soft); margin-top: 24px; padding-top: 48px; max-width: 760px; }
+.entry-about-headline { font-size: clamp(24px, 3vw, 32px); line-height: 1.2; font-weight: 600; letter-spacing: -0.03em; }
+.entry-about-detail { margin: 14px 0 18px; color: var(--muted); font-size: 15px; line-height: 1.65; max-width: 62ch; }
+
+/* Sign-in forms sit in a narrow column of the same page */
+.auth-frame-work { max-width: 460px; margin: 0 auto; padding: 56px 0 8px; }
+.landing-main > .auth-frame-work { padding-top: 72px; }
+.auth-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--r-xl); padding: 28px; box-shadow: none; }
+.entry-back { margin-bottom: 18px; }
+
+/* ============================================================================
+   Onboarding
+   ============================================================================ */
+.onboarding {
+  position: fixed; z-index: 90; right: 24px; bottom: 24px; width: min(340px, calc(100vw - 32px));
+  background: var(--ink); color: var(--bg); border-radius: var(--r-xl); padding: 8px;
+  box-shadow: var(--shadow-lg);
+  animation: ob-in 240ms cubic-bezier(0.2, 0, 0.2, 1);
+}
+@keyframes ob-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+.onboarding-close {
+  position: absolute; top: 16px; right: 16px; width: 28px; height: 28px; display: grid; place-items: center;
+  border-radius: 50%; border: none; background: var(--card); color: var(--ink); cursor: pointer; opacity: 0.9;
+}
+.onboarding-close svg { width: 14px; height: 14px; }
+.onboarding-art { background: var(--card); border-radius: calc(var(--r-xl) - 8px); height: 150px; display: grid; place-items: center; color: var(--ink); overflow: hidden; }
+.onboarding-body { padding: 16px 12px 4px; }
+.onboarding-step { font-size: 12px; opacity: 0.6; margin-bottom: 6px; }
+.onboarding-title { font-size: 17px; font-weight: 600; letter-spacing: -0.02em; margin-bottom: 6px; }
+.onboarding-text { font-size: 13.5px; line-height: 1.55; opacity: 0.72; }
+.onboarding-foot { display: flex; align-items: center; justify-content: space-between; padding: 14px 4px 4px 12px; }
+.onboarding-dots { display: flex; gap: 5px; }
+.onboarding-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; opacity: 0.28; transition: opacity var(--ease); }
+.onboarding-dot.on { opacity: 1; }
+.onboarding-actions { display: flex; gap: 6px; }
+.onboarding-btn {
+  height: 34px; padding: 0 14px; border-radius: var(--r-md); border: none; cursor: pointer; font-weight: 550; font-size: 13px;
+  background: transparent; color: var(--bg); opacity: 0.8;
+}
+.onboarding-btn:hover { opacity: 1; background: rgb(var(--overlay) / 0.1); }
+.onboarding-btn-primary { background: var(--bg); color: var(--ink); opacity: 1; }
+.onboarding-btn-primary:hover { background: var(--bg); opacity: 0.88; }
+
+/* Wireframe art, drawn in greys */
+.ob-art { width: 78%; display: flex; flex-direction: column; gap: 10px; }
+.ob-row { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border: 1px solid var(--border); border-radius: var(--r-sm); }
+.ob-row.ob-active { border-color: var(--ink); background: var(--card-soft); }
+.ob-line { height: 7px; border-radius: 4px; background: var(--green-soft-2); display: block; }
+.ob-w30 { width: 30%; } .ob-w45 { width: 45%; } .ob-w60 { width: 60%; } .ob-w70 { width: 70%; }
+.ob-radio { width: 12px; height: 12px; border-radius: 50%; border: 1.5px solid var(--border-strong); flex: none; }
+.ob-radio.ob-on { border-color: var(--ink); background: var(--ink); box-shadow: inset 0 0 0 2.5px var(--card); }
+.ob-check { width: 12px; height: 12px; border-radius: 3px; border: 1.5px solid var(--border-strong); flex: none; }
+.ob-pill { height: 26px; border-radius: var(--r-sm); background: var(--ink); width: 45%; align-self: flex-end; }
+.ob-boxes { display: flex; gap: 6px; justify-content: center; }
+.ob-box { width: 28px; height: 36px; border-radius: var(--r-sm); border: 1px solid var(--border-strong); }
+.ob-box.ob-filled { background: var(--card-soft); border-color: var(--ink); }
+.ob-art-code { align-items: stretch; }
+.ob-hash { height: 22px; border-radius: 4px; background: var(--ink); width: 80%; opacity: 0.9; }
+.ob-art-receipt { border: 1px dashed var(--border-strong); border-radius: var(--r-md); padding: 16px; }
+.ob-tabs { display: flex; gap: 6px; }
+.ob-tab { height: 22px; width: 44px; border-radius: var(--r-pill); background: var(--green-soft); }
+.ob-tab.ob-on { background: var(--ink); }
+.ob-search { height: 30px; border: 1px solid var(--border-strong); border-radius: var(--r-md); display: flex; align-items: center; padding: 0 10px; }
+
+/* ============================================================================
+   Console: top bar, tab strip, command menu
+   ============================================================================ */
+.control-shell { display: block; min-height: 100vh; background: var(--bg); }
+.control-region { display: block; }
+.control-topbar {
+  position: sticky; top: 0; z-index: 40; display: block; padding: 0;
+  background: var(--bar); backdrop-filter: saturate(1.4) blur(10px); border-bottom: 1px solid var(--border-soft);
+}
+.control-topbar-row {
+  display: flex; align-items: center; gap: 16px; max-width: calc(var(--page-max) + var(--page-gutter) * 2);
+  margin: 0 auto; padding: 12px var(--page-gutter) 6px;
+}
+.control-workspace-chip {
+  display: inline-flex; align-items: center; gap: 8px; height: 28px; padding: 0 12px; max-width: 220px;
+  border: 1px solid var(--border); border-radius: var(--r-pill); font-size: 12.5px; color: var(--muted);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.control-workspace-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--ink); flex: none; }
+.control-search {
+  flex: 1; max-width: 420px; margin: 0 auto; height: 38px; display: flex; align-items: center; gap: 10px; padding: 0 8px 0 12px;
+  background: var(--card); border: 1px solid var(--border); border-radius: var(--r-md); color: var(--muted); cursor: pointer; text-align: left;
+  transition: border-color var(--ease);
+}
+.control-search:hover { border-color: var(--border-strong); }
+.control-search svg { width: 15px; height: 15px; flex: none; }
+.control-search-text { flex: 1; font-size: 13.5px; }
+kbd {
+  font-family: var(--font-sans); font-size: 11.5px; font-weight: 500; color: var(--muted);
+  padding: 2px 7px; border: 1px solid var(--border); border-radius: 6px; background: var(--card-soft);
+}
+.control-topbar-actions { margin-left: 0; display: flex; align-items: center; gap: 8px; }
+.control-portal-btn { height: 36px; }
+.control-alert-dot { position: absolute; top: 8px; right: 9px; width: 7px; height: 7px; border-radius: 50%; background: var(--ink); box-shadow: 0 0 0 2px var(--bg); }
+
+.control-tabs { max-width: calc(var(--page-max) + var(--page-gutter) * 2); margin: 0 auto; padding: 0 var(--page-gutter); overflow-x: auto; scrollbar-width: none; }
+.control-tabs::-webkit-scrollbar { display: none; }
+.control-tabs-inner { display: flex; align-items: center; gap: 2px; padding: 4px 0 10px; min-width: max-content; }
+.control-tab {
+  display: inline-flex; align-items: center; gap: 8px; height: 34px; padding: 0 14px; border: 1px solid transparent; border-radius: var(--r-md);
+  background: none; color: var(--muted); font-weight: 500; font-size: 13.5px; cursor: pointer; white-space: nowrap;
+  transition: color var(--ease), background var(--ease), border-color var(--ease);
+}
+.control-tab:hover { color: var(--ink); background: var(--green-soft); }
+.control-tab.active { color: var(--ink); background: var(--card); border-color: var(--border); box-shadow: var(--shadow-xs); font-weight: 600; }
+.control-tab-danger { color: var(--muted-2); }
+.control-tabs-rule { width: 1px; height: 18px; background: var(--border); margin: 0 10px; flex: none; }
+.control-nav-count {
+  min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; background: var(--ink); color: var(--bg);
+  font-size: 11px; font-weight: 600; display: inline-grid; place-items: center;
+}
+
+.control-pagehead { max-width: calc(var(--page-max) + var(--page-gutter) * 2); margin: 0 auto; padding: 32px var(--page-gutter) 0; }
+.control-pagehead .control-topbar-title { font-size: 13px; font-weight: 500; letter-spacing: 0; color: var(--muted); font-family: var(--font-sans); }
+.control-pagehead-sub { display: none; }
+.control-body, .workspace { padding-top: 12px; margin-left: auto; margin-right: auto; max-width: calc(var(--page-max) + var(--page-gutter) * 2); padding-left: var(--page-gutter); padding-right: var(--page-gutter); }
+
+.user-menu { position: relative; }
+.user-menu-trigger { background: none; border: 1px solid var(--border); border-radius: 50%; padding: 2px; cursor: pointer; }
+.user-menu-trigger:hover { border-color: var(--border-strong); }
+.user-avatar {
+  display: inline-grid; place-items: center; width: 30px; height: 30px; border-radius: 50%;
+  background: var(--ink); color: var(--bg); font-size: 11.5px; font-weight: 600;
+}
+.user-menu-panel {
+  position: absolute; right: 0; top: calc(100% + 8px); width: 248px; padding: 6px; z-index: 60;
+  background: var(--card); border: 1px solid var(--border); border-radius: var(--r-lg); box-shadow: var(--shadow-lg);
+  animation: fade-in 140ms cubic-bezier(0.2, 0, 0.2, 1);
+}
+.user-menu-head { display: flex; flex-direction: column; gap: 2px; padding: 10px 10px 12px; border-bottom: 1px solid var(--border-soft); margin-bottom: 6px; }
+.user-menu-name { font-weight: 600; font-size: 14px; }
+.user-menu-role { font-size: 12.5px; color: var(--muted); }
+.user-menu-meta { display: flex; align-items: center; gap: 7px; font-size: 12px; color: var(--muted-2); margin-top: 4px; font-variant-numeric: tabular-nums; }
+.user-menu-item { display: flex; align-items: center; gap: 10px; width: 100%; height: 36px; padding: 0 10px; border: none; background: none; border-radius: var(--r-sm); color: var(--ink-2); font-size: 13.5px; cursor: pointer; text-align: left; }
+.user-menu-item:hover { background: var(--green-soft); color: var(--ink); }
+.user-menu-item svg { width: 15px; height: 15px; color: var(--muted); }
+
+.cmdk-overlay { position: fixed; inset: 0; z-index: 120; background: rgb(0 0 0 / 0.35); display: flex; justify-content: center; align-items: flex-start; padding: 14vh 16px 16px; animation: fade-in 140ms cubic-bezier(0.2, 0, 0.2, 1); }
+.cmdk { width: min(560px, 100%); max-height: min(520px, 72vh); display: flex; flex-direction: column; background: var(--card); border: 1px solid var(--border); border-radius: var(--r-xl); box-shadow: var(--shadow-lg); overflow: hidden; }
+.cmdk-input { display: flex; align-items: center; gap: 12px; padding: 0 16px; height: 56px; border-bottom: 1px solid var(--border-soft); color: var(--muted); }
+.cmdk-input svg { width: 17px; height: 17px; flex: none; }
+.cmdk-input input { flex: 1; border: none; background: none; outline: none; box-shadow: none; font-size: 15px; color: var(--ink); height: 100%; padding: 0; }
+.cmdk-list { list-style: none; overflow-y: auto; padding: 8px; }
+.cmdk-group { font-size: 11.5px; font-weight: 500; color: var(--muted-2); padding: 10px 10px 6px; }
+.cmdk-item { display: flex; align-items: center; gap: 12px; width: 100%; height: 40px; padding: 0 10px; border: none; background: none; border-radius: var(--r-md); color: var(--ink-2); font-size: 14px; cursor: pointer; text-align: left; }
+.cmdk-item.active { background: var(--green-soft); color: var(--ink); }
+.cmdk-item svg { width: 16px; height: 16px; color: var(--muted); flex: none; }
+.cmdk-label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cmdk-hint { font-size: 12.5px; color: var(--muted-2); white-space: nowrap; }
+.cmdk-empty { padding: 28px 12px; text-align: center; color: var(--muted); font-size: 13.5px; }
+
+@media (max-width: 900px) {
+  .auth-hero { grid-template-columns: 1fr; padding-top: 48px; gap: 40px; }
+  .landing-preview { min-height: 320px; max-width: 460px; }
+  .entry-ways { grid-template-columns: 1fr; }
+  .landing-steps { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .landing-bar-link { display: none; }
+  .control-workspace-chip { display: none; }
+}
+@media (max-width: 720px) {
+  .control-topbar-row { gap: 10px; padding-top: 10px; }
+  .control-search { flex: none; width: 38px; padding: 0; justify-content: center; margin: 0 0 0 auto; }
+  .control-search-text, .control-search kbd, .control-portal-btn { display: none; }
+  .landing-steps { grid-template-columns: 1fr; }
+  .onboarding { right: 16px; bottom: 16px; }
+}
+
+/* ---- Election cards: height follows content ---- */
+.election-card { height: auto; min-height: 0; grid-template-rows: auto auto 1fr auto; gap: 14px; padding: 20px; box-shadow: none; }
+.election-card:hover { background: var(--card); border-color: var(--ink); box-shadow: none; }
+.election-card-open:hover h2 { color: var(--ink); }
+.election-card { display: flex; flex-direction: column; align-items: stretch; }
+.election-card .election-card-desc { flex: 1; }
+.election-card .election-card-foot { margin-top: 2px; }
+.election-card h2 { font-size: 18px; font-weight: 600; letter-spacing: -0.02em; line-height: 1.25; font-family: var(--font-sans); }
+.election-tally { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.election-tally > div { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.election-tally strong { font-size: 20px; font-weight: 600; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.election-tally .eyebrow { font-size: 11.5px; }
+
+/* An icon with no sized container falls back to text size rather than filling it. */
+:where(svg[focusable='false']) { width: 16px; height: 16px; flex: none; }
+.election-card-when { display: inline-flex; align-items: center; gap: 7px; font-size: 12.5px; color: var(--muted); }
+
+/* ---- Everything that used to be set in the display serif: semi-bold sans ---- */
+.page-title,
+.card-title,
+.auth-card h1,
+.auth-card h2,
+.auth-frame-statement,
+.entry-way-label,
+.auth-hero h1,
+.entry-about-headline,
+.stat-value,
+.kpi-value,
+.mini-stat-value,
+.empty-state h3,
+.preview-voter-title,
+.election-list-header h1,
+.voter-context h1,
+.focus-head h1,
+.focus-head h2,
+.ballot-heading h2,
+.candidate-info .candidate-name,
+.confirmed-title,
+.results-header h2,
+.results-hidden h2,
+.tally-name,
+.tally-percent,
+.modal-content h2,
+.modal-candidate-card .mc-name,
+.control-topbar-title,
+.control-head-text h1,
+.control-card-head h2,
+.attention-card-head h2,
+.funnel-row-title h3,
+.funnel-row-tally strong,
+.funnel-step-value,
+.workspace-title h1,
+.panel-head h2,
+.panel-head h3,
+.admin-form-head h2,
+.roster-name,
+.roster-tally strong,
+.results-card-title h2,
+.results-summary-cell strong,
+.legal-inner h1,
+.legal-standfirst,
+.legal-inner h2 {
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+.legal-standfirst { font-weight: 400; letter-spacing: -0.01em; }
+.tally-name, .roster-name, .candidate-info .candidate-name, .mc-name { font-weight: 550; letter-spacing: -0.01em; }
+
+@media (max-width: 720px) {
+  .site-bar-secure { display: none; }
+  .site-bar-meta svg { display: none; }
+  .site-bar-inner { gap: 12px; }
+}
+@media (max-width: 720px) {
+  .onboarding-art { height: 110px; }
+  .landing-preview { min-height: 440px; }
 }

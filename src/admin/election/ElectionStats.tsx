@@ -183,12 +183,6 @@ function TurnoutChart({ election, serverOffsetMs }: { election: ElectionSummary;
           <div className="chart-frame">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={series.points} margin={{ top: 8, right: 8, bottom: 0, left: -14 }}>
-                <defs>
-                  <linearGradient id="turnoutFill" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="var(--blue)" stopOpacity={0.22} />
-                    <stop offset="100%" stopColor="var(--blue)" stopOpacity={0.01} />
-                  </linearGradient>
-                </defs>
                 <CartesianGrid vertical={false} stroke="var(--border-soft)" />
                 <XAxis
                   dataKey="label"
@@ -208,22 +202,27 @@ function TurnoutChart({ election, serverOffsetMs }: { election: ElectionSummary;
                 <Tooltip
                   cursor={{ stroke: 'var(--border-strong)' }}
                   contentStyle={{
-                    borderRadius: 'var(--r-sm)',
-                    border: '1px solid var(--border)',
+                    borderRadius: 'var(--r-md)',
+                    border: 'none',
+                    background: 'var(--ink)',
+                    color: 'var(--bg)',
                     boxShadow: 'var(--shadow-md)',
                     fontSize: 12,
+                    padding: '8px 12px',
                   }}
-                  labelStyle={{ color: 'var(--muted)', fontSize: 11 }}
+                  itemStyle={{ color: 'var(--bg)' }}
+                  labelStyle={{ color: 'var(--bg)', opacity: 0.6, fontSize: 11 }}
                   formatter={(value) => [`${Number(value).toLocaleString()} ballots`, 'Votes cast']}
                 />
                 <Area
                   type="monotone"
                   dataKey="votes"
-                  stroke="var(--blue)"
-                  strokeWidth={2}
-                  fill="url(#turnoutFill)"
+                  stroke="var(--ink)"
+                  strokeWidth={1.75}
+                  fill="var(--ink)"
+                  fillOpacity={0.05}
                   dot={false}
-                  activeDot={{ r: 4, strokeWidth: 0, fill: 'var(--blue)' }}
+                  activeDot={{ r: 4, strokeWidth: 2, stroke: 'var(--bg)', fill: 'var(--ink)' }}
                 />
               </AreaChart>
             </ResponsiveContainer>

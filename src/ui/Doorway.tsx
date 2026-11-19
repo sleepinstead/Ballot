@@ -17,6 +17,7 @@
 
 import { Icon } from './Icon'
 import { AuthFrame } from './Shell'
+import { Onboarding, WELCOME_STEPS, replayOnboarding } from './Onboarding'
 
 const YEAR = new Date().getFullYear()
 
@@ -108,13 +109,20 @@ export const DESTINATIONS: {
   },
 ]
 
+const STEPS = [
+  { n: '01', title: 'Set up', detail: 'Create the election, add candidates and import the voter roll.' },
+  { n: '02', title: 'Verify', detail: 'Each voter confirms identity with a one-time code. No accounts.' },
+  { n: '03', title: 'Vote', detail: 'One ballot per voter, written without a link back to the person.' },
+  { n: '04', title: 'Certify', detail: 'Close the poll, check the tally and certify. Every step is logged.' },
+]
+
 export function Doorway({ onAdmin }: { onAdmin: () => void }) {
   return (
     <AuthFrame statement={DOOR_HERO.statement} meta={DOOR_HERO.meta}>
       <DoorHero />
 
-      <div className="auth-frame-work">
-        <nav className="entry-ways" aria-label="Choose where to go next">
+      <section className="landing-section" aria-label="Choose where to go next">
+        <nav className="entry-ways">
           {DESTINATIONS.map((destination) => (
             <button
               key={destination.id}
@@ -128,6 +136,9 @@ export function Doorway({ onAdmin }: { onAdmin: () => void }) {
                 window.location.hash = '#/vote'
               }}
             >
+              <span className="entry-way-icon" aria-hidden="true">
+                <Icon name={destination.id === 'admin' ? 'gauge' : 'vote'} />
+              </span>
               <span className="entry-way-text">
                 <span className="entry-way-label">{destination.label}</span>
                 <span className="entry-way-detail">{destination.detail}</span>
@@ -138,40 +149,70 @@ export function Doorway({ onAdmin }: { onAdmin: () => void }) {
             </button>
           ))}
         </nav>
+      </section>
 
-        {/*
-          What the product is, below the two doors. It earns its place by being the
-          same answer whichever door someone is about to walk through, and by being
-          the one thing a first-time visitor cannot get from either.
-        */}
-        <div className="entry-about">
-          <span className="eyebrow">{ABOUT.eyebrow}</span>
-          <p className="entry-about-headline">{ABOUT.headline}</p>
-          <p className="entry-about-detail">{ABOUT.detail}</p>
-        </div>
-      </div>
+      <section className="landing-section" aria-label="How it works">
+        <span className="eyebrow">How it works</span>
+        <ol className="landing-steps">
+          {STEPS.map((step) => (
+            <li key={step.n} className="landing-step">
+              <span className="landing-step-n">{step.n}</span>
+              <h3>{step.title}</h3>
+              <p>{step.detail}</p>
+            </li>
+          ))}
+        </ol>
+      </section>
+
+      <section className="landing-section entry-about" aria-label="About Ballot">
+        <span className="eyebrow">{ABOUT.eyebrow}</span>
+        <p className="entry-about-headline">{ABOUT.headline}</p>
+        <p className="entry-about-detail">{ABOUT.detail}</p>
+        <button type="button" className="link-button" onClick={() => replayOnboarding('welcome')}>
+          Take the quick tour
+        </button>
+      </section>
+
+      <Onboarding id="welcome" steps={WELCOME_STEPS} />
     </AuthFrame>
   )
 }
 
 /**
- * The hero, above the doors.
- *
- * Short on purpose: an eyebrow, the headline in two lines, one sentence of lede, and
- * an accent rule that closes the block. The promise that used to sit here as a
- * fourth block now runs under the photograph, where there is room for it and it does
- * not compete with the work.
+ * The hero, above the doors: a status pill, the headline, one sentence, and a
+ * small product preview built from the same cards the app itself uses.
  */
 export function DoorHero() {
   return (
     <div className="auth-hero">
-      <span className="eyebrow eyebrow-blue">{DOOR_HERO.eyebrow}</span>
-      <h1>
-        {DOOR_HERO.headline}
-        <span className="accent">{DOOR_HERO.accent}</span>
-      </h1>
-      <p className="auth-hero-lede">{DOOR_HERO.lede}</p>
-      <div className="auth-hero-rule" />
+      <div className="auth-hero-copy">
+        <span className="landing-pill">
+          <span className="landing-pill-dot" aria-hidden="true" />
+          {DOOR_HERO.eyebrow}
+        </span>
+        <h1>
+          {DOOR_HERO.headline}
+          <span className="accent">{DOOR_HERO.accent}</span>
+        </h1>
+        <p className="auth-hero-lede">{DOOR_HERO.lede}</p>
+      </div>
+
+      <div className="landing-preview" aria-hidden="true">
+        <div className="lp-card lp-ballot">
+          <span className="lp-label">Ballot</span>
+          <div className="lp-title">Student council president</div>
+          <div className="lp-option lp-on"><span className="lp-radio" />A. Rivera</div>
+          <div className="lp-option"><span className="lp-radio" />M. Okafor</div>
+          <div className="lp-option"><span className="lp-radio" />J. Lindqvist</div>
+          <div className="lp-btn">Cast ballot</div>
+        </div>
+        <div className="lp-card lp-receipt">
+          <span className="lp-label">Receipt</span>
+          <div className="lp-hash">7F3A·91C2·E04B</div>
+          <div className="lp-meter"><span /></div>
+          <div className="lp-meta"><span>Turnout</span><span>68%</span></div>
+        </div>
+      </div>
     </div>
   )
 }

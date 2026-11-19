@@ -18,7 +18,7 @@
  * refused for exactly the same reason one it did offer would be.
  */
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { authApi, electionApi } from '../lib/api'
 import { ROLE_LABELS, roleHas, type Permission } from '../lib/rbac'
 import type { ClientSession } from '../lib/adminTypes'
@@ -26,6 +26,8 @@ import type { ElectionSummary } from '../lib/types'
 import { Alert, Spinner } from '../ui/primitives'
 import { Icon, initials, type IconName } from '../ui/Icon'
 import { Brand } from '../ui/Shell'
+import { Onboarding, ADMIN_STEPS, replayOnboarding } from '../ui/Onboarding'
+import { CommandPalette, type Command } from './CommandPalette'
 import { ThemeToggle } from '../ui/ThemeToggle'
 import { ElevationProvider, useElevation } from './control/elevation'
 import { AdminLogin } from './AdminLogin'
@@ -154,7 +156,9 @@ function ControlCentre({
   const [workspaceId, setWorkspaceId] = useState<string | null>(null)
   const [focusElectionId, setFocusElectionId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [navOpen, setNavOpen] = useState(false)
+  const [paletteOpen, setPaletteOpen] = useState(false)
+  const [userOpen, setUserOpen] = useState(false)
+  const userMenuRef = useRef<HTMLDivElement>(null)
   const [countdown, setCountdown] = useState(0)
   const [alerts, setAlerts] = useState<AlertCounts>({ security: 0 })
 
@@ -187,6 +191,26 @@ function ControlCentre({
     return () => clearInterval(interval)
   }, [session.expires_at, serverOffsetMs])
 
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
+        event.preventDefault()
+        setPaletteOpen((open) => !open)
+      } else if (event.key === 'Escape') {
+        setUserOpen(false)
+      }
+    }
+    const onDown = (event: MouseEvent) => {
+      if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) setUserOpen(false)
+    }
+    window.addEventListener('keydown', onKey)
+    window.addEventListener('mousedown', onDown)
+    return () => {
+      window.removeEventListener('keydown', onKey)
+      window.removeEventListener('mousedown', onDown)
+    }
+  }, [])
+
   const refresh = useCallback(async () => {
     await loadElections()
     onChanged()
@@ -203,10 +227,10 @@ function ControlCentre({
   }
 
   const navigate = (target: string, electionId?: string) => {
+    window.scrollTo(0, 0)
     if (electionId) setFocusElectionId(electionId)
     const item = allowed.find((entry) => entry.id === target)
     if (item) setSection(item.id)
-    setNavOpen(false)
   }
 
   // A failed election read must not tear down the console. The shell stays, the
@@ -225,10 +249,46 @@ function ControlCentre({
     )
   }
 
-  const groups: { id: NavItem['group']; label: string }[] = [
-    { id: 'operate', label: 'Workspace' },
-    { id: 'govern', label: 'Governance' },
+  const commands: Command[] = [
+    ...allowed.map((item) => ({
+      id: `go-${item.id}`,
+      label: item.label,
+      hint: item.hint,
+      group: 'Go to' as const,
+      icon: item.icon,
+      run: () => navigate(item.id),
+    })),
+    ...(elections ?? []).slice(0, 12).map((election) => ({
+      id: `election-${election.id}`,
+      label: election.title,
+      hint: 'Open workspace',
+      group: 'Elections' as const,
+      icon: 'flag' as IconName,
+      run: () => openWorkspace(election.id),
+    })),
+    { id: 'portal', label: 'Open voter portal', group: 'Actions', icon: 'vote', run: () => { window.location.hash = '#/vote' } },
+    { id: 'tour', label: 'Take the tour', group: 'Actions', icon: 'sparkle', run: () => replayOnboarding('admin') },
+    { id: 'signout', label: 'Sign out', group: 'Actions', icon: 'logout', run: () => void signOut() },
   ]
+
+  const primary = allowed.filter((item) => item.group === 'operate')
+  const secondary = allowed.filter((item) => item.group !== 'operate')
+
+  const tab = (item: NavItem) => {
+    const count = item.count ? item.count(alerts) : 0
+    return (
+      <button
+        key={item.id}
+        type="button"
+        className={`control-tab${current?.id === item.id ? ' active' : ''}${item.id === 'danger' ? ' control-tab-danger' : ''}`}
+        aria-current={current?.id === item.id ? 'page' : undefined}
+        onClick={() => navigate(item.id)}
+      >
+        {item.label}
+        {count > 0 && <span className="control-nav-count">{count}</span>}
+      </button>
+    )
+  }
 
   return (
     <div className="control-shell">
@@ -236,138 +296,22 @@ function ControlCentre({
         Skip to content
       </a>
 
-      <nav id="control-nav" className={`control-nav${navOpen ? ' control-nav-open' : ''}`} aria-label="Administration sections">
-        <div className="control-brand">
+      <header className="control-topbar">
+        <div className="control-topbar-row">
           <Brand onNavigate={() => { window.location.hash = '#/' }} />
-        </div>
-
-        <div className="control-workspace" role="button" tabIndex={0}>
-          <span className="workspace-avatar" aria-hidden="true">
-            {initials(workspace.name)}
+          <span className="control-workspace-chip" title={workspace.name}>
+            <span className="control-workspace-dot" aria-hidden="true" />
+            {workspace.name}
           </span>
-          <span className="control-workspace-text">
-            <span className="control-workspace-name">{workspace.name}</span>
-            <span className="control-workspace-sub">Local workspace</span>
-          </span>
-          <Icon name="chevron-down" />
-        </div>
 
-        <div className="control-nav-scroll">
-          {groups.map((group) => {
-            const items = allowed.filter((item) => item.group === group.id)
-            if (items.length === 0) return null
-            return (
-              <div key={group.id} className="control-nav-group">
-                <p className="control-nav-label">{group.label}</p>
-                {items.map((item) => {
-                  const count = item.count ? item.count(alerts) : 0
-                  return (
-                    <button
-                      key={item.id}
-                      type="button"
-                      className={`control-nav-item${current?.id === item.id ? ' active' : ''}${
-                        item.id === 'danger' ? ' control-nav-danger' : ''
-                      }`}
-                      aria-current={current?.id === item.id ? 'page' : undefined}
-                      onClick={() => navigate(item.id)}
-                    >
-                      <Icon name={item.icon} />
-                      <span className="control-nav-item-label">{item.label}</span>
-                      {count > 0 && <span className="control-nav-count">{count}</span>}
-                    </button>
-                  )
-                })}
-              </div>
-            )
-          })}
-
-          <div className="control-nav-group">
-            <p className="control-nav-label">Your account</p>
-            {allowed
-              .filter((item) => item.group === 'account')
-              .map((item) => (
-                <button
-                  key={item.id}
-                  type="button"
-                  className={`control-nav-item${current?.id === item.id ? ' active' : ''}`}
-                  aria-current={current?.id === item.id ? 'page' : undefined}
-                  onClick={() => navigate(item.id)}
-                >
-                  <Icon name={item.icon} />
-                  <span className="control-nav-item-label">{item.label}</span>
-                </button>
-              ))}
-            {/* Signing out belongs with your identity, not among the platform's
-                sections, so it appears whether or not Settings is granted. */}
-            <button type="button" className="control-nav-item" onClick={() => void signOut()}>
-              <Icon name="logout" />
-              <span className="control-nav-item-label">Sign out</span>
-            </button>
-          </div>
-        </div>
-
-        <div className="control-nav-foot">
-          <div className="control-nav-card">
-            <Icon name="lock" />
-            <div>
-              <strong>Local &amp; secure</strong>
-              <span>Data stays on this device</span>
-            </div>
-          </div>
-          <button type="button" className="control-portal" onClick={() => { window.location.hash = '#/vote' }}>
-            <Icon name="logout" />
-            Open voter portal
-            <Icon name="arrow-right" />
+          <button type="button" className="control-search" onClick={() => setPaletteOpen(true)} aria-label="Open command menu">
+            <Icon name="search" />
+            <span className="control-search-text">Search or jump to…</span>
+            <kbd>{typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform) ? '⌘K' : 'Ctrl K'}</kbd>
           </button>
-          <div className="control-user">
-            <span className="user-avatar" aria-hidden="true">
-              {initials(session.admin.display_name)}
-            </span>
-            <span className="control-user-text">
-              <span className="control-user-name">{session.admin.display_name}</span>
-              <span className="control-user-role">{ROLE_LABELS[role]}</span>
-              {/* The session lifetime and the second-factor state belong with the
-                  identity, not in the top bar: both are facts about this person,
-                  not about the page. */}
-              <span className="control-user-meta">
-                <span className={`control-identity-dot${busy ? ' control-identity-busy' : ''}`} aria-hidden="true" />
-                {session.admin.mfa_enabled ? '2FA on' : 'Password only'} · {formatCountdownSeconds(countdown)}
-              </span>
-            </span>
-            <button type="button" onClick={() => void signOut()} title="Sign out" aria-label="Sign out">
-              <Icon name="logout" />
-            </button>
-          </div>
-        </div>
-      </nav>
 
-      <div className="control-region">
-        <header className="control-topbar">
-          <button
-            type="button"
-            className="control-nav-toggle"
-            aria-expanded={navOpen}
-            aria-controls="control-nav"
-            onClick={() => setNavOpen((value) => !value)}
-          >
-            <Icon name="gauge" />
-            {current?.label ?? 'Menu'}
-          </button>
-          <div className="control-topbar-text">
-            <span className="eyebrow">
-              {workspace.name} / {workspace.cycle}
-            </span>
-            <h1 className="control-topbar-title">{current?.label ?? 'Overview'}</h1>
-          </div>
           <div className="control-topbar-actions">
-            <span className="control-role-pill">
-              <Icon name="user" />
-              {ROLE_LABELS[role]}
-            </span>
             <ThemeToggle />
-            <button type="button" className="btn-icon" aria-label="Search" onClick={() => navigate('elections')}>
-              <Icon name="search" />
-            </button>
             <button
               type="button"
               className="btn-icon"
@@ -375,28 +319,64 @@ function ControlCentre({
               onClick={() => (alerts.security > 0 ? navigate('security') : navigate('audit'))}
             >
               <Icon name="bell" />
-              {alerts.security > 0 && (
-                <span
-                  aria-hidden="true"
-                  style={{
-                    position: 'absolute',
-                    top: 7,
-                    right: 8,
-                    width: 6,
-                    height: 6,
-                    borderRadius: 3,
-                    background: 'var(--red)',
-                  }}
-                />
-              )}
+              {alerts.security > 0 && <span className="control-alert-dot" aria-hidden="true" />}
             </button>
-            <button type="button" className="btn-primary" onClick={() => { window.location.hash = '#/vote' }}>
-              <Icon name="logout" />
+            <button type="button" className="btn-outline control-portal-btn" onClick={() => { window.location.hash = '#/vote' }}>
               Voter portal
+              <Icon name="arrow-up-right" />
             </button>
+            <div className="user-menu" ref={userMenuRef}>
+              <button
+                type="button"
+                className="user-menu-trigger"
+                aria-haspopup="menu"
+                aria-expanded={userOpen}
+                aria-label="Account menu"
+                onClick={() => setUserOpen((open) => !open)}
+              >
+                <span className="user-avatar" aria-hidden="true">{initials(session.admin.display_name)}</span>
+              </button>
+              {userOpen && (
+                <div className="user-menu-panel" role="menu">
+                  <div className="user-menu-head">
+                    <span className="user-menu-name">{session.admin.display_name}</span>
+                    <span className="user-menu-role">{ROLE_LABELS[role]}</span>
+                    <span className="user-menu-meta">
+                      <span className={`control-identity-dot${busy ? ' control-identity-busy' : ''}`} aria-hidden="true" />
+                      {session.admin.mfa_enabled ? '2FA on' : 'Password only'} · {formatCountdownSeconds(countdown)}
+                    </span>
+                  </div>
+                  {allowed.some((item) => item.id === 'settings') && (
+                    <button type="button" role="menuitem" className="user-menu-item" onClick={() => { setUserOpen(false); navigate('settings') }}>
+                      <Icon name="cog" /> Settings
+                    </button>
+                  )}
+                  <button type="button" role="menuitem" className="user-menu-item" onClick={() => { setUserOpen(false); replayOnboarding('admin') }}>
+                    <Icon name="sparkle" /> Take the tour
+                  </button>
+                  <button type="button" role="menuitem" className="user-menu-item" onClick={() => void signOut()}>
+                    <Icon name="logout" /> Sign out
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
-        </header>
+        </div>
 
+        <nav className="control-tabs" aria-label="Administration sections">
+          <div className="control-tabs-inner">
+            {primary.map(tab)}
+            {secondary.length > 0 && <span className="control-tabs-rule" aria-hidden="true" />}
+            {secondary.filter((item) => item.id !== 'settings').map(tab)}
+            {secondary.filter((item) => item.id === 'settings').map(tab)}
+          </div>
+        </nav>
+      </header>
+
+      {paletteOpen && <CommandPalette commands={commands} onClose={() => setPaletteOpen(false)} />}
+      <Onboarding id="admin" steps={ADMIN_STEPS} />
+
+      <div className="control-region">
         <main id="control-main" className="control-main">
           {error && (
             <div className="control-body control-flash">
