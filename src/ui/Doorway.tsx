@@ -7,7 +7,7 @@
  * everything below them is for the visitor who wants to know what this is first.
  *
  * The hero's other half is a specimen ballot that can be marked. It is the
- * product's one device — the ballot oval — doing what it does everywhere else,
+ * product's one device — the box you mark on a ballot — doing what it does everywhere else,
  * so a first-time visitor has already used the voting control before they reach
  * a real ballot.
  *
@@ -94,7 +94,7 @@ const SPECIMEN = ['Amara Rivera', 'Malik Okafor', 'Johanna Lindqvist']
 /**
  * A ballot a visitor can mark.
  *
- * Nothing is sent anywhere. Marking an oval fills it and tears off a sample
+ * Nothing is sent anywhere. Marking a box ticks it and tears off a sample
  * receipt, which is the whole voting experience in miniature.
  */
 function SpecimenBallot() {
@@ -117,7 +117,7 @@ function SpecimenBallot() {
                 aria-pressed={marked === index}
                 onClick={() => setMarked(marked === index ? null : index)}
               >
-                <span className="specimen-oval" aria-hidden="true" />
+                <span className="specimen-box" aria-hidden="true" />
                 {name}
               </button>
             </li>

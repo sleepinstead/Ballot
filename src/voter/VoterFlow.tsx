@@ -8,7 +8,7 @@
  *
  * The picker groups elections by what a voter can do with them: open now,
  * coming up, closed. Once an election is chosen the frame is constant: a way back,
- * the oval step indicator, the election's name, then a single focused column.
+ * the step bar, the election's name, then a single focused column.
  * Only the column's contents change, which keeps a voter oriented.
  */
 
@@ -58,7 +58,7 @@ function stepFor(stage: Stage): number {
   // 'results' is not a stage of its own — it is a detour off the ballot, reached
   // from a stage already passed, so it keeps that stage's marker rather than
   // inventing one.
-  // On the receipt every step is behind the voter, so every oval is filled.
+  // On the receipt every step is behind the voter, so every bar is filled.
   if (stage === 'receipt') return STEPS.length
   return 3
 }
@@ -126,9 +126,9 @@ function shuffled<T>(items: T[], seed: number): T[] {
 /**
  * The progress indicator.
  *
- * A ballot oval per stage with the label beneath it. The oval carries the state —
- * filled where the voter has been, ringed where they are, empty ahead — so the
- * steps read the way a marked ballot does.
+ * A bar per stage with the label beneath it. The bar carries the state — filled
+ * where the voter has been and where they are, empty ahead — so progress reads
+ * at a glance without counting.
  */
 function StageSteps({ activeStep }: { activeStep: number }) {
   return (
@@ -765,7 +765,7 @@ export function VoterFlow({
   )
 }
 
-/** A centred message that stands in for a screen: an oval badge, a title, a paragraph, actions. */
+/** A centred message that stands in for a screen: a square badge, a title, a paragraph, actions. */
 function VoterMessage({
   tone,
   icon,
@@ -882,10 +882,10 @@ function BallotStage({
           <h2 id="ballot-title">{ballot.election.title}</h2>
         </header>
         <div className="ballot-sheet-instr">
-          <span className="ballot-instr-oval" aria-hidden="true" />
+          <span className="ballot-instr-box" aria-hidden="true" />
           <p>
             <strong>{required === 1 ? 'Mark one choice.' : `Mark ${required} choices.`}</strong> Select an option to
-            fill its oval. Select it again to clear it.
+            tick its box. Select it again to clear it.
           </p>
         </div>
         <div className="candidate-list">
@@ -948,7 +948,7 @@ function BallotStage({
           <p className="modal-desc">You&rsquo;re about to submit a vote for:</p>
           {chosen.map((option) => (
             <div className="modal-candidate-card" key={option.key}>
-              <span className="mc-oval" aria-hidden="true" />
+              <span className="mc-box" aria-hidden="true" />
               <span>
                 <span className="mc-name">{option.name}</span>
                 {option.organization && <span className="mc-party">{option.organization}</span>}
