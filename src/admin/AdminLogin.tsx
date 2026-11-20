@@ -135,9 +135,6 @@ export function AdminLogin({
 
           <form className="auth-card" onSubmit={submitCode}>
               <div className="auth-card-head">
-                <span className="icon-tile tile-green">
-                  <Icon name="shield-check" />
-                </span>
                 <div>
                   <span className="eyebrow">Step 2 of 2</span>
                   <h2>Verify it&rsquo;s you</h2>
@@ -174,8 +171,7 @@ export function AdminLogin({
               </DemoNote>
 
               <button type="submit" className="btn-primary btn-block" disabled={busy} style={{ marginTop: 12 }}>
-                {busy ? 'Verifying…' : 'Verify & enter'}
-                <Icon name="arrow-right" />
+                {busy ? 'Verifying…' : 'Verify and sign in'}
               </button>
               {/*
                 No second back link at the foot. The one at the top of this stage
@@ -205,9 +201,6 @@ export function AdminLogin({
 
         <form className="auth-card" onSubmit={submitPassword}>
             <div className="auth-card-head">
-              <span className="icon-tile tile-blue">
-                <Icon name="lock" />
-              </span>
               <div>
                 {/*
                   No eyebrow here. The hero directly above already says
@@ -216,13 +209,13 @@ export function AdminLogin({
                   as a label. The second-factor step keeps its own, because
                   "Step 2 of 2" tells the operator something the hero does not.
                 */}
-                <h2>{needsBootstrap ? 'Create the first administrator' : 'Administrator sign in'}</h2>
+                <h2>{needsBootstrap ? 'Create the first administrator' : 'Sign in to manage elections'}</h2>
               </div>
             </div>
             <p className="card-subtitle">
               {needsBootstrap
                 ? 'This server has no administrator accounts yet. The account you create now will own every election on it.'
-                : 'Use your administrator credentials to continue.'}
+                : 'Use the username and password you were given by your Super Admin.'}
             </p>
 
             {error && (
@@ -293,6 +286,7 @@ export function AdminLogin({
               control that could not change the outcome would be a promise the
               server does not keep, so the screen states the role instead.
             */}
+            {needsBootstrap && (
             <div className="role-readout">
               <span className="eyebrow">Sign in as</span>
               <span className="role-readout-value">
@@ -305,14 +299,14 @@ export function AdminLogin({
                   : 'Granted by whoever created the account. The request cannot raise it.'}
               </span>
             </div>
+            )}
 
             <button type="submit" className="btn-primary btn-block btn-lg" disabled={busy}>
               {busy
                 ? 'Working…'
                 : needsBootstrap
                   ? 'Create account and sign in'
-                  : 'Continue securely'}
-              {!busy && <Icon name="arrow-right" />}
+                  : 'Sign in'}
             </button>
 
             <div style={{ marginTop: 18 }}>

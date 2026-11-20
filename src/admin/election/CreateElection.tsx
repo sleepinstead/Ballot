@@ -11,7 +11,7 @@ import { electionApi } from '../../lib/api'
 import { commonTimeZones, formatInZone, isValidTimeZone, localTimeZone, utcToWallTime, wallTimeToUtc } from '../../lib/time'
 import { ELECTION_TYPES, ELECTION_TYPE_LABELS, type ElectionSummary, type ElectionType } from '../../lib/types'
 import { defaultEligibility, defaultRules } from '../../lib/validate'
-import { Alert, Eyebrow, Field } from '../../ui/primitives'
+import { Alert, Field } from '../../ui/primitives'
 
 function defaultStart(): string {
   const now = new Date()
@@ -86,8 +86,6 @@ export function CreateElection({ onCreated, onCancel }: { onCreated: (election: 
   return (
     <form className="admin-form" onSubmit={submit}>
       <div className="admin-form-head">
-        <Eyebrow>New election</Eyebrow>
-        <h2 style={{ marginTop: 9 }}>Create an election</h2>
         <p>
           A new election always starts as a <strong>draft</strong>. Nothing is visible to voters and no votes are accepted
           until you publish it, open it, and the scheduled window is reached.

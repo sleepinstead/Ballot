@@ -82,7 +82,11 @@ export function DashboardPanel({ onNavigate, canAccess, serverOffsetMs, onOpenWo
       <SectionHeader
         eyebrow={longDate(data.server_time, serverOffsetMs)}
         title={`Good ${greeting()}, ${firstName}.`}
-        description="Your elections are healthy. Here's what needs your attention."
+        description={
+          attention.length > 0
+            ? `${attention.length} ${attention.length === 1 ? 'thing needs' : 'things need'} your attention.`
+            : 'Everything is on schedule. Nothing needs you right now.'
+        }
         actions={
           canAccess('elections') ? (
             <button type="button" className="btn-primary" onClick={() => onNavigate('elections')}>
@@ -127,14 +131,39 @@ export function DashboardPanel({ onNavigate, canAccess, serverOffsetMs, onOpenWo
         />
       </div>
 
-      {attention.length > 0 && (
-        <div className="control-head" style={{ marginBottom: 16 }}>
-          <div className="control-head-text">
-            <Eyebrow tone="blue">Live workspace</Eyebrow>
-            <h1 className="card-title" style={{ fontSize: 20 }}>Your elections</h1>
+      <div style={{ marginBottom: 32 }}>
+          <div className="attention-card">
+            <div className="attention-card-head">
+              <h2>Needs your attention</h2>
+              {attention.length > 4 && <span className="cell-secondary">Showing 4 of {attention.length}</span>}
+            </div>
+
+            {attention.length === 0 ? (
+              <p className="control-muted">
+                Nothing needs you right now. Every election is on schedule and no alert is outstanding.
+              </p>
+            ) : (
+              <ul className="attention-list">
+                {attention.slice(0, 4).map((item, index) => (
+                  <li key={item.text} className={`attention attention-${item.tone}`}>
+                    <span className="attention-index">{index + 1}</span>
+                    <span className="attention-text">
+                      <strong>{item.title}</strong>
+                      <span>{item.text}</span>
+                    </span>
+                    {item.section && canAccess(item.section) && (
+                      <button type="button" onClick={() => onNavigate(item.section as string)} aria-label={`Open ${item.title}`}>
+                        <Icon name="arrow-right" />
+                      </button>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
-        </div>
-      )}
+      </div>
+
+      <h2 className="card-title" style={{ marginBottom: 14 }}>Your elections</h2>
 
       <div className="control-grid" style={{ marginBottom: 22 }}>
         {live.length === 0 ? (
@@ -181,41 +210,6 @@ export function DashboardPanel({ onNavigate, canAccess, serverOffsetMs, onOpenWo
         </ControlCard>
 
         <div className="control-stack">
-          <div className="attention-card">
-            <div className="attention-card-head">
-              <div>
-                <Eyebrow tone="muted" className="eyebrow-navy">Needs attention</Eyebrow>
-                <h2 style={{ marginTop: 8 }}>Keep things moving</h2>
-              </div>
-              <span className="icon-tile tile-white-line">
-                <Icon name="sparkle" />
-              </span>
-            </div>
-
-            {attention.length === 0 ? (
-              <p style={{ fontSize: 13, color: 'var(--navy-text)', padding: '14px 0 4px' }}>
-                Nothing needs you right now. Every election is on schedule and no alert is outstanding.
-              </p>
-            ) : (
-              <ul className="attention-list">
-                {attention.slice(0, 4).map((item, index) => (
-                  <li key={item.text} className={`attention attention-${item.tone}`}>
-                    <span className="attention-index">{String(index + 1).padStart(2, '0')}</span>
-                    <span className="attention-text">
-                      <strong>{item.title}</strong>
-                      <span>{item.text}</span>
-                    </span>
-                    {item.section && canAccess(item.section) && (
-                      <button type="button" onClick={() => onNavigate(item.section as string)} aria-label={`Open ${item.title}`}>
-                        <Icon name="arrow-right" />
-                      </button>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-
           <ControlCard
             eyebrow="Assurance"
             title="Security"
@@ -371,13 +365,10 @@ function ElectionTile({ row, onOpen }: {
     <button type="button" className="election-card" onClick={onOpen}>
       <div className="election-card-top">
         <StatusBadge status={row.status} effective={row.effective_status} />
-        <span className="roster-arrow">
-          <Icon name="more" />
-        </span>
       </div>
       <h2>{row.title}</h2>
       <p className="election-card-desc">
-        {ELECTION_TYPE_LABELS[row.election_type as ElectionType] ?? row.election_type} · {row.candidate_count}{' '}
+        {ELECTION_TYPE_LABELS[row.election_type as ElectionType] ?? row.election_type}, {row.candidate_count}{' '}
         {row.candidate_count === 1 ? 'candidate' : 'candidates'}
       </p>
       <div className="election-tally">

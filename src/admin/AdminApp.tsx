@@ -222,12 +222,14 @@ function ControlCentre({
   }
 
   const openWorkspace = (electionId: string) => {
+    window.scrollTo(0, 0)
     setWorkspaceId(electionId)
     setFocusElectionId(electionId)
   }
 
   const navigate = (target: string, electionId?: string) => {
     window.scrollTo(0, 0)
+    setWorkspaceId(null)
     if (electionId) setFocusElectionId(electionId)
     const item = allowed.find((entry) => entry.id === target)
     if (item) setSection(item.id)
@@ -235,19 +237,9 @@ function ControlCentre({
 
   // A failed election read must not tear down the console. The shell stays, the
   // error is shown with a way to retry, and the panels keep whatever they had.
-  if (workspaceId && elections) {
-    return (
-      <ElectionWorkspace
-        electionId={workspaceId}
-        serverOffsetMs={serverOffsetMs}
-        onChanged={refresh}
-        onBack={() => {
-          setWorkspaceId(null)
-          void loadElections()
-        }}
-      />
-    )
-  }
+  // An open election workspace renders inside the console frame, so the top bar,
+  // search and section tabs stay in reach while an officer works on one election.
+  const inWorkspace = Boolean(workspaceId && elections)
 
   const commands: Command[] = [
     ...allowed.map((item) => ({
@@ -271,6 +263,7 @@ function ControlCentre({
     { id: 'signout', label: 'Sign out', group: 'Actions', icon: 'logout', run: () => void signOut() },
   ]
 
+  const activeId = inWorkspace ? 'elections' : current?.id
   const primary = allowed.filter((item) => item.group === 'operate')
   const secondary = allowed.filter((item) => item.group !== 'operate')
 
@@ -280,8 +273,8 @@ function ControlCentre({
       <button
         key={item.id}
         type="button"
-        className={`control-tab${current?.id === item.id ? ' active' : ''}${item.id === 'danger' ? ' control-tab-danger' : ''}`}
-        aria-current={current?.id === item.id ? 'page' : undefined}
+        className={`control-tab${activeId === item.id ? ' active' : ''}${item.id === 'danger' ? ' control-tab-danger' : ''}`}
+        aria-current={activeId === item.id ? 'page' : undefined}
         onClick={() => navigate(item.id)}
       >
         {item.label}
@@ -298,7 +291,7 @@ function ControlCentre({
 
       <header className="control-topbar">
         <div className="control-topbar-row">
-          <Brand onNavigate={() => { window.location.hash = '#/' }} />
+          <Brand sub="Admin" onNavigate={() => { window.location.hash = '#/' }} />
           <span className="control-workspace-chip" title={workspace.name}>
             <span className="control-workspace-dot" aria-hidden="true" />
             {workspace.name}
@@ -322,8 +315,8 @@ function ControlCentre({
               {alerts.security > 0 && <span className="control-alert-dot" aria-hidden="true" />}
             </button>
             <button type="button" className="btn-outline control-portal-btn" onClick={() => { window.location.hash = '#/vote' }}>
+              <Icon name="vote" />
               Voter portal
-              <Icon name="arrow-up-right" />
             </button>
             <div className="user-menu" ref={userMenuRef}>
               <button
@@ -378,6 +371,18 @@ function ControlCentre({
 
       <div className="control-region">
         <main id="control-main" className="control-main">
+          {inWorkspace && workspaceId ? (
+            <ElectionWorkspace
+              electionId={workspaceId}
+              serverOffsetMs={serverOffsetMs}
+              onChanged={refresh}
+              onBack={() => {
+                setWorkspaceId(null)
+                void loadElections()
+              }}
+            />
+          ) : (
+          <>
           {error && (
             <div className="control-body control-flash">
               <Alert tone="error">
@@ -449,6 +454,8 @@ function ControlCentre({
           {current?.id === 'settings' && <SettingsPanel role={role} session={session} onChanged={refresh} />}
 
           {current?.id === 'danger' && <DangerPanel role={role} onChanged={refresh} />}
+          </>
+          )}
         </main>
       </div>
     </div>

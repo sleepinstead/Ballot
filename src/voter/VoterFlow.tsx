@@ -6,29 +6,31 @@
  * reports, and the ballot itself is only rendered when the server says voting
  * is open, so a voter is never left guessing why they cannot proceed.
  *
- * The frame is constant across the flow: a dark brand strip, a step
- * indicator, then a single focused card. Only the card's contents change, which
- * is what keeps a voter oriented while they move through it.
+ * The picker groups elections by what a voter can do with them: open now,
+ * coming up, closed. Once an election is chosen the frame is constant: a way back,
+ * the oval step indicator, the election's name, then a single focused column.
+ * Only the column's contents change, which keeps a voter oriented.
  */
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import {
   forgetVoterSession,
   markVoterSession,
   voterApi,
+  voterSessionElection,
   type VoterBallotResult,
   type VoterBeginResult,
 } from '../lib/api'
 import { describeVotableState, formatWindow } from '../lib/time'
-import { STATUS_LABELS } from '../lib/lifecycle'
 import {
   ELECTION_TYPE_LABELS,
   SPECIAL_OPTION_IDS,
   type BallotOption,
+  type ElectionStatus,
   type ElectionSummary,
 } from '../lib/types'
-import { Alert, Countdown, DemoNote, Eyebrow, Field, Modal, StatusBadge } from '../ui/primitives'
-import { Icon } from '../ui/Icon'
+import { Alert, Countdown, DemoNote, EmptyState, Eyebrow, Field, Modal, StatusBadge } from '../ui/primitives'
+import { Icon, type IconName } from '../ui/Icon'
 import { ResultsPanel } from './ResultsPanel'
 
 type Stage = 'pick' | 'preview' | 'identify' | 'codes' | 'ballot' | 'receipt' | 'results'
@@ -36,30 +38,44 @@ type Stage = 'pick' | 'preview' | 'identify' | 'codes' | 'ballot' | 'receipt' | 
 /**
  * The stages the progress indicator names, in order.
  *
- * One entry per stage a voter can actually be on. The list deliberately mirrors
- * the flow's own states rather than grouping them, so the indicator is a map of
- * where they are rather than a summary of what happened.
+ * One entry per stage a voter can be on once they have chosen an election. The
+ * picker itself is not a step: a progress bar on the first screen only says how
+ * far there is to go before anything has started.
  */
 const STEPS = [
-  { id: 'pick', label: 'Choose' },
-  { id: 'preview', label: 'Preview' },
-  { id: 'identify', label: 'Identify' },
+  { id: 'preview', label: 'Overview' },
+  { id: 'identify', label: 'Your ID' },
   { id: 'codes', label: 'Code' },
   { id: 'ballot', label: 'Ballot' },
   { id: 'receipt', label: 'Receipt' },
 ] as const
 
 function stepFor(stage: Stage): number {
-  if (stage === 'pick') return 0
-  if (stage === 'preview') return 1
-  if (stage === 'identify') return 2
-  if (stage === 'codes') return 3
-  if (stage === 'ballot') return 4
+  if (stage === 'pick' || stage === 'preview') return 0
+  if (stage === 'identify') return 1
+  if (stage === 'codes') return 2
+  if (stage === 'ballot') return 3
   // 'results' is not a stage of its own — it is a detour off the ballot, reached
   // from a stage already passed, so it keeps that stage's marker rather than
   // inventing one.
-  if (stage === 'receipt') return 5
-  return 4
+  // On the receipt every step is behind the voter, so every oval is filled.
+  if (stage === 'receipt') return STEPS.length
+  return 3
+}
+
+/**
+ * How the picker groups elections: by what a voter can do with each one.
+ */
+type ElectionGroupId = 'open' | 'upcoming' | 'closed'
+const ELECTION_GROUPS: { id: ElectionGroupId; title: string }[] = [
+  { id: 'open', title: 'Open now' },
+  { id: 'upcoming', title: 'Coming up' },
+  { id: 'closed', title: 'Closed' },
+]
+function groupFor(status: ElectionStatus): ElectionGroupId {
+  if (status === 'open') return 'open'
+  if (status === 'closed' || status === 'certified' || status === 'archived') return 'closed'
+  return 'upcoming'
 }
 
 type Flash = { tone: 'info' | 'warn' | 'error' | 'success'; text: string } | null
@@ -110,9 +126,9 @@ function shuffled<T>(items: T[], seed: number): T[] {
 /**
  * The progress indicator.
  *
- * A bar per stage with the label beneath it. The bar carries the state — filled
- * and lit where the voter has been, flat where they have not — so progress is
- * legible at a glance without reading five numbers.
+ * A ballot oval per stage with the label beneath it. The oval carries the state —
+ * filled where the voter has been, ringed where they are, empty ahead — so the
+ * steps read the way a marked ballot does.
  */
 function StageSteps({ activeStep }: { activeStep: number }) {
   return (
@@ -127,7 +143,10 @@ function StageSteps({ activeStep }: { activeStep: number }) {
             aria-current={index === activeStep ? 'step' : undefined}
           >
             <span className="step-bar" aria-hidden="true" />
-            <span className="step-label">{step.label}</span>
+            <span className="step-label">
+              {step.label}
+              {index < activeStep && <span className="sr-only"> (done)</span>}
+            </span>
           </li>
         ))}
       </ol>
@@ -233,6 +252,13 @@ export function VoterFlow({
     [],
   )
 
+  /** Closed elections have nothing to vote on, so they open straight onto their results. */
+  const openResults = useCallback((id: string) => {
+    setElectionId(id)
+    setFlash(null)
+    setStage('results')
+  }, [])
+
   const state = useMemo(() => {
     if (!election) return null
     return describeVotableState({
@@ -324,75 +350,90 @@ export function VoterFlow({
 
   if (elections.length === 0) {
     return (
-      <div className="voter-shell">
-        <div className="empty-state">
-          <span className="icon-tile icon-tile-lg tile-blue">
-            <Icon name="ballot" />
-          </span>
-          <h3>No elections are available</h3>
-          <p>There are no published elections on this server yet. An administrator needs to create and publish one first.</p>
-        </div>
+      <div className="voter-shell voter-shell-wide">
+        <EmptyState title="No elections are open to voters yet" icon="ballot">
+          <p>When an administrator publishes an election, it will appear here. Check back later or contact your election officer.</p>
+        </EmptyState>
       </div>
     )
   }
 
   if (stage === 'pick' || !election || !state) {
+    const listed = elections.filter((item) => item.status !== 'archived')
+    const groups = ELECTION_GROUPS.map((group) => ({
+      ...group,
+      items: listed.filter((item) => groupFor(item.effective_status) === group.id),
+    })).filter((group) => group.items.length > 0)
+
     return (
-      <div className="voter-shell">
-        <StageSteps activeStep={stepFor('pick')} />
-        <div className="election-list-header">
-          <Eyebrow tone="blue">Voter portal</Eyebrow>
-          <h1 style={{ marginTop: 12 }}>Available elections</h1>
-          <p>Choose an election to take part in. Each election has its own schedule and voter roll.</p>
-        </div>
-        <div className="election-grid">
-          {elections
-            .filter((item) => item.status !== 'archived')
-            .map((item) => {
-              const itemState = describeVotableState({
-                status: item.effective_status,
-                startsAt: item.starts_at,
-                endsAt: item.ends_at,
-                serverOffsetMs,
-              })
-              const window_ = formatWindow(item.starts_at, item.ends_at, item.timezone)
-              const status = item.effective_status
-              return (
-                <button key={item.id} type="button" className="election-card" onClick={() => void openElection(item.id)}>
-                  <div className="election-card-meta">
-                    <span className="election-card-type">{ELECTION_TYPE_LABELS[item.election_type]}</span>
-                    <span className={`election-card-status election-card-status-${status}`}>
-                      <span className="election-card-status-dot" aria-hidden="true" />
-                      {STATUS_LABELS[status]}
-                      {status !== item.status && <span className="election-card-auto">Auto</span>}
-                    </span>
-                    <span className="roster-arrow" aria-hidden="true"><Icon name="arrow-right" /></span>
-                  </div>
+      <div className="voter-shell voter-shell-wide">
+        <header className="voter-intro">
+          <h1>Choose your election</h1>
+          <p>
+            Pick the election you were invited to vote in. You&rsquo;ll confirm who you are before you see the
+            ballot, and your choices are never stored with your name.
+          </p>
+        </header>
 
-                  <h2>{item.title}</h2>
-                  <p className="election-card-desc">{item.description || 'No description provided.'}</p>
-
-                  <div className="election-card-foot">
-                    <span className="election-card-window" title={window_.zone ? `${window_.label} · ${window_.zone}` : window_.label}>
-                      <span className="election-card-window-label">{window_.label}</span>
-                      {window_.zone && <span className="election-card-window-zone">{window_.zone}</span>}
-                    </span>
-                    {itemState.nextChangeAt !== null ? (
-                      <span className="election-card-timer" aria-label={itemState.nextChangeLabel ?? 'Time remaining'}>
-                        <Countdown
-                          targetAt={itemState.nextChangeAt}
-                          serverOffsetMs={serverOffsetMs}
-                          prefix={itemState.nextChangeLabel?.replace(/^Voting /, '').replace(/^window /, '')}
-                        />
+        {groups.map((group) => (
+          <section className="election-group" key={group.id} aria-labelledby={`group-${group.id}`}>
+            <h2 className="election-group-title" id={`group-${group.id}`}>
+              {group.title}
+              <span className="election-group-count">{group.items.length}</span>
+            </h2>
+            <div className="election-list">
+              {group.items.map((item) => {
+                const itemState = describeVotableState({
+                  status: item.effective_status,
+                  startsAt: item.starts_at,
+                  endsAt: item.ends_at,
+                  serverOffsetMs,
+                })
+                const window_ = formatWindow(item.starts_at, item.ends_at, item.timezone)
+                const action =
+                  group.id === 'closed' ? 'See results' : group.id === 'open' && itemState.canVote ? 'Vote' : 'View details'
+                return (
+                  <button
+                    key={item.id}
+                    type="button"
+                    className={`election-row election-row-${group.id}`}
+                    onClick={() => (group.id === 'closed' ? openResults(item.id) : openElection(item.id))}
+                  >
+                    <span className="election-row-main">
+                      <span className="election-row-meta">
+                        <StatusBadge status={item.status} effective={item.effective_status} />
+                        <span className="election-row-type">{ELECTION_TYPE_LABELS[item.election_type]}</span>
                       </span>
-                    ) : (
-                      <span className="election-card-state-detail">{itemState.headline}</span>
-                    )}
-                  </div>
-                </button>
-              )
-            })}
-        </div>
+                      <span className="election-row-title">{item.title}</span>
+                      {item.description && <span className="election-row-desc">{item.description}</span>}
+                    </span>
+                    <span className="election-row-when">
+                      <span className="election-row-window">
+                        {window_.label}
+                        {window_.zone && <span className="election-row-zone">{window_.zone}</span>}
+                      </span>
+                      <span className="election-row-next">
+                        {itemState.nextChangeAt !== null ? (
+                          <Countdown
+                            targetAt={itemState.nextChangeAt}
+                            serverOffsetMs={serverOffsetMs}
+                            prefix={`${itemState.nextChangeLabel ?? 'Changes'} `}
+                          />
+                        ) : (
+                          itemState.headline
+                        )}
+                      </span>
+                    </span>
+                    <span className="election-row-action">
+                      {action}
+                      <Icon name="chevron-right" />
+                    </span>
+                  </button>
+                )
+              })}
+            </div>
+          </section>
+        ))}
       </div>
     )
   }
@@ -400,35 +441,42 @@ export function VoterFlow({
   /* ------------------------------------------------------------- the flow --- */
 
   const activeStep = stepFor(stage)
-  const label = [election.title, ELECTION_TYPE_LABELS[election.election_type]].filter(Boolean).join(' · ')
-  const purpose = ballotPurpose(election.description, election.title, ELECTION_TYPE_LABELS[election.election_type])
+  const typeLabel = ELECTION_TYPE_LABELS[election.election_type]
+  const purpose = ballotPurpose(election.description, election.title, typeLabel)
+  const window_ = formatWindow(election.starts_at, election.ends_at, election.timezone)
+  const identifierLabel = election.eligibility.identifierLabel || 'voter ID'
+  // The ballot sheet carries the election's name in its own header.
+  const showContext = stage !== 'preview' && stage !== 'results' && stage !== 'ballot'
 
   return (
-    <div className="voter-shell">
-      <StageSteps activeStep={activeStep} />
+    <div className={`voter-shell${stage === 'results' ? ' voter-shell-wide' : ''}`}>
+      <div className="voter-frame-top">
+        <button type="button" className="workspace-back" onClick={back}>
+          <Icon name="arrow-left" />
+          All elections
+        </button>
+        {stage !== 'results' && <StageSteps activeStep={activeStep} />}
+      </div>
 
-      {stage !== 'results' && (
-        <div style={{ marginBottom: 18 }}>
-          <button type="button" className="workspace-back" onClick={back}>
-            <Icon name="arrow-left" />
-            All elections
-          </button>
-        </div>
+      {showContext && (
+        <p className="voter-context-line">
+          <span className="voter-context-title">{election.title}</span>
+          <StatusBadge status={election.status} effective={election.effective_status} />
+        </p>
       )}
 
       {flash && (
-        <Alert tone={flash.tone}>
-          {flash.text}
-        </Alert>
+        <div className="voter-flash">
+          <Alert tone={flash.tone}>{flash.text}</Alert>
+        </div>
       )}
 
       {stage === 'preview' && (
-        <div className="focus-card focus-card-plain">
+        <div className="focus-card">
           <div className="focus-head">
             <div>
-              <Eyebrow tone="blue">Ballot preview · {ELECTION_TYPE_LABELS[election.election_type]}</Eyebrow>
+              <Eyebrow>{typeLabel}</Eyebrow>
               <h1>{election.title}</h1>
-              <p>The description below explains why the election is being held and what the ballot covers.</p>
             </div>
           </div>
 
@@ -437,10 +485,43 @@ export function VoterFlow({
             <p>{purpose}</p>
           </div>
 
+          <dl className="voter-facts">
+            <div>
+              <dt>Status</dt>
+              <dd>
+                <StatusBadge status={election.status} effective={election.effective_status} />
+              </dd>
+            </div>
+            <div>
+              <dt>Voting window</dt>
+              <dd>
+                {window_.label}
+                {window_.zone && <span className="voter-facts-sub">{window_.zone}</span>}
+              </dd>
+            </div>
+            <div>
+              <dt>{state.nextChangeAt !== null ? state.nextChangeLabel ?? 'Next change' : 'Right now'}</dt>
+              <dd>
+                {state.nextChangeAt !== null ? (
+                  <Countdown targetAt={state.nextChangeAt} serverOffsetMs={serverOffsetMs} />
+                ) : (
+                  state.headline
+                )}
+              </dd>
+            </div>
+            <div>
+              <dt>You&rsquo;ll need</dt>
+              <dd>
+                Your {identifierLabel}
+                {election.rules.requireOtp ? ' and a one-time code' : ''}
+              </dd>
+            </div>
+          </dl>
+
           <button type="button" className="btn-primary btn-block btn-lg" onClick={() => setStage('identify')}>
             Continue to verification
-            <Icon name="arrow-right" />
           </button>
+          {!state.canVote && <p className="focus-foot">{state.detail}</p>}
         </div>
       )}
 
@@ -448,14 +529,22 @@ export function VoterFlow({
         <form className="focus-card" onSubmit={submitIdentifier}>
           <div className="focus-head">
             <div>
-              <Eyebrow tone="blue">{label}</Eyebrow>
               <h1>Cast your ballot securely.</h1>
               <p>
-                Enter the {election.eligibility.identifierLabel || 'voter identifier'} issued to you for this
-                election. Your identity and ballot choices are kept separate by design.
+                Enter the {identifierLabel} issued to you for this election. Who you are and how you vote are stored
+                separately, so the two can never be linked.
               </p>
             </div>
           </div>
+
+          {!state.canVote && (
+            <Alert tone="warn">
+              {state.headline}. You can&rsquo;t vote in this election right now.
+              <button type="button" className="link-button inline" onClick={() => setStage('results')}>
+                View results
+              </button>
+            </Alert>
+          )}
 
           <Field label={election.eligibility.identifierLabel || 'Voter ID'} htmlFor="identifier">
             <input
@@ -463,6 +552,7 @@ export function VoterFlow({
               type="text"
               value={identifier}
               autoComplete="off"
+              autoFocus={state.canVote}
               onChange={(event) => setIdentifier(event.target.value)}
               placeholder="e.g. STU-2026-0001"
               required
@@ -472,44 +562,25 @@ export function VoterFlow({
 
           {election.eligibility.notes && <p className="voter-info-note">{election.eligibility.notes}</p>}
 
-          {!state.canVote && (
-            <div style={{ marginBottom: 18 }}>
-              <Alert tone="warn">
-                You cannot vote in this election right now. You can still review the schedule above.
-                <button type="button" className="link-button inline" onClick={() => setStage('results')}>
-                  View results
-                </button>
-              </Alert>
-            </div>
+          {state.nextChangeAt !== null && (
+            <p className="voter-state-bar">
+              <Icon name="clock" />
+              <Countdown targetAt={state.nextChangeAt} serverOffsetMs={serverOffsetMs} prefix={`${state.nextChangeLabel} `} />
+            </p>
           )}
 
-          <div className="voter-state-bar" style={{ marginBottom: 18 }}>
-            <StatusBadge status={election.status} effective={election.effective_status} />
-            <span className="voter-state-headline">{state.headline}</span>
-            {state.nextChangeAt !== null && (
-              <Countdown targetAt={state.nextChangeAt} serverOffsetMs={serverOffsetMs} prefix={`${state.nextChangeLabel} `} />
-            )}
-          </div>
-
           <button type="submit" className="btn-primary btn-block btn-lg" disabled={busy || !state.canVote}>
-            {busy ? 'Checking…' : 'Verify & continue'}
-            {!busy && <Icon name="arrow-right" />}
+            {busy ? 'Checking…' : 'Verify and continue'}
           </button>
 
-          <div className="focus-foot">
-            <p>Need help? Contact your election officer.</p>
-          </div>
+          <p className="focus-foot">Not sure what your {identifierLabel} is? Ask your election officer.</p>
         </form>
       )}
 
       {stage === 'codes' && begin && (
         <form className="focus-card" onSubmit={submitCodes}>
           <div className="focus-head">
-            <span className="icon-tile icon-tile-lg tile-blue">
-              <Icon name="key" />
-            </span>
             <div>
-              <Eyebrow tone="blue">{label}</Eyebrow>
               <h1>Enter your code.</h1>
               <p>
                 {/*
@@ -517,42 +588,43 @@ export function VoterFlow({
                  * is on the roll, so neither does the screen: it would be pointless to
                  * ask the browser to keep a secret the response never carried.
                  */}
-                Enter the one-time codes sent to the contacts registered to you.
+                We&rsquo;ve sent a one-time code to the contact details registered to you. Codes expire after a few
+                minutes.
               </p>
             </div>
           </div>
 
           {begin.demo_codes && (
-            <div style={{ marginBottom: 18 }}>
-              <DemoNote>
-                Demonstration build
-                {begin.demo_codes.phone && (
-                  <>
-                    {' · '}Phone <code>{begin.demo_codes.phone}</code>
-                  </>
-                )}
-                {begin.demo_codes.email && (
-                  <>
-                    {' · '}Email <code>{begin.demo_codes.email}</code>
-                  </>
-                )}
-                . Generated fresh for each attempt and they expire.
-              </DemoNote>
-            </div>
+            <DemoNote>
+              <strong>Demo build.</strong> Your codes are
+              {begin.demo_codes.phone && (
+                <>
+                  {' '}phone <code>{begin.demo_codes.phone}</code>
+                </>
+              )}
+              {begin.demo_codes.phone && begin.demo_codes.email && ' and'}
+              {begin.demo_codes.email && (
+                <>
+                  {' '}email <code>{begin.demo_codes.email}</code>
+                </>
+              )}
+              . They change on every attempt.
+            </DemoNote>
           )}
 
-          {begin.challenges.map((challenge) => (
+          {begin.challenges.map((challenge, index) => (
             <Field
               key={challenge.challenge_id}
-              label={challenge.channel === 'phone' ? 'Code sent by phone' : 'Code sent by email'}
+              label={challenge.channel === 'phone' ? 'Code sent by text message' : 'Code sent by email'}
               htmlFor={`code-${challenge.channel}`}
-              hint={`Valid for ${challenge.expires_in} seconds. One wrong try counts against it.`}
+              hint={`Valid for ${challenge.expires_in} seconds. A wrong code counts as one attempt.`}
             >
               <input
                 id={`code-${challenge.channel}`}
                 className="otp-field"
                 inputMode="numeric"
                 autoComplete="one-time-code"
+                autoFocus={index === 0}
                 maxLength={challenge.digits}
                 placeholder={'•'.repeat(challenge.digits)}
                 value={codes[challenge.challenge_id] ?? ''}
@@ -569,32 +641,25 @@ export function VoterFlow({
             </Field>
           ))}
 
-          <button type="submit" className="btn-primary btn-block btn-lg" disabled={busy} style={{ marginTop: 20 }}>
-            {busy ? 'Verifying…' : 'Verify & open ballot'}
-            {!busy && <Icon name="arrow-right" />}
+          <button type="submit" className="btn-primary btn-block btn-lg" disabled={busy}>
+            {busy ? 'Verifying…' : 'Verify and open ballot'}
           </button>
           <div className="focus-foot">
             <button type="button" className="link-secondary" onClick={() => setStage('identify')}>
-              Use a different identifier
+              Use a different {identifierLabel}
             </button>
           </div>
         </form>
       )}
 
       {stage === 'ballot' && !ballot && (
-        <div className="focus-card" style={{ textAlign: 'center' }}>
-          <div className="confirmed-icon" style={{ margin: '0 auto 20px', background: 'var(--red-soft)' }}>
-            <Icon name="warning" style={{ color: 'var(--red)' }} />
-          </div>
-          <Eyebrow tone="blue">{label}</Eyebrow>
-          <h1 style={{ fontSize: 24, fontWeight: 700, letterSpacing: '-0.028em', marginTop: 10 }}>Your ballot could not be opened</h1>
-          <p style={{ color: 'var(--muted)', fontSize: 13.5, lineHeight: 1.65, marginTop: 12 }}>
-            The server did not return a ballot, so nothing is shown here rather than a blank page. You have not been
-            charged a vote: this election can only be cast once, and that happens on submission.
+        <VoterMessage tone="stop" icon="warning" title="Your ballot could not be opened">
+          <p>
+            The server didn&rsquo;t return a ballot. You haven&rsquo;t used your vote — a vote only counts once you
+            submit it. Try again, or go back and choose the election again.
           </p>
-          <div style={{ display: 'flex', gap: 10, marginTop: 22, justifyContent: 'center', flexWrap: 'wrap' }}>
+          <div className="voter-message-actions">
             <button type="button" className="btn-outline" onClick={back}>
-              <Icon name="arrow-left" />
               All elections
             </button>
             <button
@@ -609,7 +674,7 @@ export function VoterFlow({
               Try again
             </button>
           </div>
-        </div>
+        </VoterMessage>
       )}
 
       {stage === 'ballot' && ballot && (
@@ -631,16 +696,16 @@ export function VoterFlow({
 
       {stage === 'receipt' && receipt && (
         <div className="confirmed-card">
-          <div className="green-stripe" />
-          <div className="confirmed-icon">
-            <Icon name="check" strokeWidth={2.5} />
+          <div className="confirmed-top">
+            <span className="confirmed-mark" aria-hidden="true">
+              <Icon name="check" strokeWidth={2.5} />
+            </span>
+            <h2 className="confirmed-title">Your ballot is cast</h2>
+            <p className="confirmed-subtitle">
+              Keep the receipt code below. It proves a ballot was recorded for this election, and it can&rsquo;t
+              reveal how you voted.
+            </p>
           </div>
-          <Eyebrow tone="blue">{label}</Eyebrow>
-          <h2 className="confirmed-title" style={{ marginTop: 10 }}>Your ballot is cast</h2>
-          <p className="confirmed-subtitle">
-            Keep the receipt code below. It is the only way to confirm a ballot exists for this election, and it
-            deliberately cannot show what you chose.
-          </p>
 
           {receipt.receipts.length > 0 && (
             <div className="receipt-box">
@@ -667,12 +732,10 @@ export function VoterFlow({
 
           <div className="receipt-note">
             <p>
-              This code proves a ballot was recorded for the election. It cannot show what you chose, and it cannot
-              be turned back into your identity.
+              Your receipt can&rsquo;t be traced back to you, and it doesn&rsquo;t record your choice.
               {receipt.digest && (
                 <>
-                  {' '}Integrity digest{' '}
-                  <code>{receipt.digest.slice(0, 24)}…</code>
+                  {' '}Integrity digest <code>{receipt.digest.slice(0, 24)}…</code>
                 </>
               )}
             </p>
@@ -691,15 +754,36 @@ export function VoterFlow({
 
       {stage === 'results' && (
         <div className="voter-results">
-          <ResultsPanel electionId={election.id} onSignOut={signOut} />
-          <div className="focus-foot">
-            <button type="button" className="link-secondary" onClick={back}>
-              <Icon name="arrow-left" />
-              Back to elections
-            </button>
-          </div>
+          <header className="voter-intro voter-intro-compact">
+            <Eyebrow>{typeLabel}</Eyebrow>
+            <h1>{election.title}</h1>
+          </header>
+          <ResultsPanel electionId={election.id} onSignOut={voterSessionElection() === election.id ? signOut : undefined} />
         </div>
       )}
+    </div>
+  )
+}
+
+/** A centred message that stands in for a screen: an oval badge, a title, a paragraph, actions. */
+function VoterMessage({
+  tone,
+  icon,
+  title,
+  children,
+}: {
+  tone: 'mark' | 'soon' | 'stop'
+  icon: IconName
+  title: string
+  children: ReactNode
+}) {
+  return (
+    <div className="voter-message">
+      <span className={`voter-message-icon voter-message-${tone}`} aria-hidden="true">
+        <Icon name={icon} />
+      </span>
+      <h1>{title}</h1>
+      {children}
     </div>
   )
 }
@@ -761,85 +845,94 @@ function BallotStage({
 
   if (alreadyCast) {
     return (
-      <div className="focus-card focus-card-lg" style={{ textAlign: 'center' }}>
-        <div className="confirmed-icon" style={{ margin: '0 auto 20px' }}>
-          <Icon name="check" strokeWidth={2.5} />
-        </div>
-        <Eyebrow tone="blue">{ballot.election.title}</Eyebrow>
-        <h1 style={{ fontSize: 26, fontWeight: 700, letterSpacing: '-0.03em', marginTop: 10 }}>You have already voted</h1>
-        <p style={{ color: 'var(--muted)', fontSize: 13.5, lineHeight: 1.65, marginTop: 12 }}>
-          Your ballot for this election was recorded. One vote per eligible voter is enforced, and because your ballot
-          is not stored against your identity there is nothing to show you about what you chose — your receipt is the
-          record of it.
+      <VoterMessage tone="mark" icon="check" title="You have already voted">
+        <p>
+          Your ballot for this election was recorded. Each voter can vote once, and because your ballot is not stored
+          against your identity there&rsquo;s nothing to show you about what you chose. Your receipt is the record of
+          it.
         </p>
-      </div>
+      </VoterMessage>
     )
   }
 
   if (!ballot.can_vote) {
     return (
-      <div className="focus-card focus-card-lg" style={{ textAlign: 'center' }}>
-        <div className="confirmed-icon" style={{ margin: '0 auto 20px', background: 'var(--amber-soft)' }}>
-          <Icon name="clock" style={{ color: 'var(--amber-ink)' }} />
-        </div>
-        <Eyebrow tone="blue">{ballot.election.title}</Eyebrow>
-        <h1 style={{ fontSize: 26, fontWeight: 700, letterSpacing: '-0.03em', marginTop: 10 }}>Voting credential expired</h1>
-        <p style={{ color: 'var(--muted)', fontSize: 13.5, lineHeight: 1.65, marginTop: 12 }}>
-          Your voting credential is short lived, so it has expired while the ballot was open. Get a fresh one to cast
-          your vote — you do not need to verify your identity again.
+      <VoterMessage tone="soon" icon="clock" title="Your voting session timed out">
+        <p>
+          For security, the permission to vote only lasts a short time. Get a new one to continue — you don&rsquo;t
+          need to verify your identity again.
         </p>
-        <button type="button" className="btn-primary btn-lg" style={{ marginTop: 22 }} disabled={busy} onClick={onRequestCredential}>
-          {busy ? 'Requesting…' : 'Get a new credential'}
-          {!busy && <Icon name="arrow-right" />}
-        </button>
-      </div>
+        <div className="voter-message-actions">
+          <button type="button" className="btn-primary btn-lg" disabled={busy} onClick={onRequestCredential}>
+            {busy ? 'Requesting…' : 'Continue voting'}
+          </button>
+        </div>
+      </VoterMessage>
     )
   }
 
   const chosen = options.filter((option) => selected.includes(idsFor(option)))
+  const complete = selected.length === required
 
   return (
     <div className="vote-content">
-      <div className="ballot-heading">
-        <Eyebrow tone="blue">{ballot.election.title}</Eyebrow>
-        <h2 style={{ marginTop: 10 }}>
-          {required === 1 ? 'Choose one option.' : `Choose ${required} options.`}
-        </h2>
-        <p>Your vote is final once submitted. Nothing links your name to your selection.</p>
-      </div>
-      <div className="candidate-list">
-        {options.map((option) => {
-          const id = idsFor(option)
-          const isSelected = selected.includes(id)
-          return (
-            <label key={option.key} className={`candidate-row${isSelected ? ' selected' : ''}${option.kind !== 'candidate' ? ' special' : ''}`}>
-              <span className="radio-circle" aria-hidden="true" />
-              <input type="checkbox" name={`option-${option.key}`} checked={isSelected} onChange={() => toggle(option)} />
-              {ballot.rules.showCandidateImages && option.image_url && option.kind === 'candidate' && (
-                <img className="candidate-photo" src={option.image_url} alt="" />
-              )}
-              <span className="candidate-info">
-                <span className="candidate-name">{optionLabel(option)}</span>
-                {option.organization && <span className="candidate-party">{option.organization}</span>}
+      <section className="ballot-sheet" aria-labelledby="ballot-title">
+        <header className="ballot-sheet-head">
+          <span className="ballot-sheet-kicker">Official ballot</span>
+          <h2 id="ballot-title">{ballot.election.title}</h2>
+        </header>
+        <div className="ballot-sheet-instr">
+          <span className="ballot-instr-oval" aria-hidden="true" />
+          <p>
+            <strong>{required === 1 ? 'Mark one choice.' : `Mark ${required} choices.`}</strong> Select an option to
+            fill its oval. Select it again to clear it.
+          </p>
+        </div>
+        <div className="candidate-list">
+          {options.map((option) => {
+            const id = idsFor(option)
+            const isSelected = selected.includes(id)
+            return (
+              <label
+                key={option.key}
+                className={`candidate-row${isSelected ? ' selected' : ''}${option.kind !== 'candidate' ? ' special' : ''}`}
+              >
+                <input type="checkbox" name={`option-${option.key}`} checked={isSelected} onChange={() => toggle(option)} />
+                <span className="radio-circle" aria-hidden="true" />
+                {ballot.rules.showCandidateImages && option.image_url && option.kind === 'candidate' && (
+                  <img className="candidate-photo" src={option.image_url} alt="" />
+                )}
+                <span className="candidate-info">
+                  <span className="candidate-name">{optionLabel(option)}</span>
+                  {option.organization && <span className="candidate-party">{option.organization}</span>}
+                  {option.description && <span className="candidate-desc">{option.description}</span>}
+                </span>
                 {option.symbol && <span className="candidate-symbol">{option.symbol}</span>}
-                {option.description && <span className="candidate-desc">{option.description}</span>}
-              </span>
-            </label>
-          )
-        })}
-      </div>
-      <button type="button" className="btn-submit-ballot" disabled={selected.length !== required} onClick={() => setConfirming(true)}>
-        Review and submit
-        <Icon name="arrow-right" />
-      </button>
-      <p className="focus-foot">
-        <span className="muted">
-          {selected.length} of {required} selected
+              </label>
+            )
+          })}
+        </div>
+      </section>
+
+      <div className={`ballot-bar${complete ? ' ballot-bar-ready' : ''}`}>
+        <span className="ballot-bar-count" aria-live="polite">
+          <strong>
+            {selected.length} of {required}
+          </strong>{' '}
+          marked
         </span>
+        <button type="button" className="btn-submit-ballot" disabled={!complete} onClick={() => setConfirming(true)}>
+          Review and submit
+        </button>
+      </div>
+      <p className="ballot-privacy">
+        <Icon name="lock" />
+        Your choices are stored without your name. Nothing is recorded until you submit.
       </p>
+
       {confirming && (
         <Modal
-          title="Confirm your selection"
+          title="Check your ballot"
           onClose={() => setConfirming(false)}
           footer={
             <>
@@ -852,14 +945,21 @@ function BallotStage({
             </>
           }
         >
-          <p className="modal-desc">You are about to submit your vote for:</p>
+          <p className="modal-desc">You&rsquo;re about to submit a vote for:</p>
           {chosen.map((option) => (
             <div className="modal-candidate-card" key={option.key}>
-              <div className="mc-name">{option.name}</div>
-              {option.organization && <div className="mc-party">{option.organization}</div>}
+              <span className="mc-oval" aria-hidden="true" />
+              <span>
+                <span className="mc-name">{option.name}</span>
+                {option.organization && <span className="mc-party">{option.organization}</span>}
+              </span>
             </div>
           ))}
-          <div className="modal-warning">This is final and cannot be changed unless this election allows vote changes.</div>
+          <p className="modal-warning">
+            {ballot.rules.allowVoteChange
+              ? 'You can change this vote later while voting is open.'
+              : 'You can’t change your vote after you submit it.'}
+          </p>
         </Modal>
       )}
     </div>

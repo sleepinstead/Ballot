@@ -75,10 +75,10 @@ export function SiteBar({ meta, children }: { meta?: ReactNode; children?: React
         <Brand onNavigate={() => { window.location.hash = '#/' }} />
         {meta ?? (
           <span className="site-bar-meta">
-            <Icon name="lock" />
-            Local workspace
-            <span className="site-bar-sep">·</span>
-            {typeof window !== 'undefined' ? window.location.host : 'local'}
+            <span className="site-bar-secure">
+              <Icon name="lock" />
+              {typeof window !== 'undefined' ? window.location.host : 'Local workspace'}
+            </span>
           </span>
         )}
         {children}
@@ -182,8 +182,8 @@ export function AuthFrame({
         <div className="landing-bar-inner">
           <Brand onNavigate={goHome} />
           <nav className="landing-bar-nav" aria-label="Primary">
-            <a href="#/vote" className="landing-bar-link">Voter portal</a>
-            <a href="#/admin" className="landing-bar-link">Admin console</a>
+            <a href="#/vote" className="landing-bar-link">Vote</a>
+            <a href="#/admin" className="landing-bar-link">Admin sign in</a>
             <ThemeToggle />
           </nav>
         </div>

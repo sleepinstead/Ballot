@@ -233,7 +233,7 @@ export function LegalPage({
             */}
             <BackLink to={backTo} label={backLabel} />
 
-            <p className="eyebrow">Ballot</p>
+            <p className="eyebrow">Ballot.</p>
             <h1>{page.title}</h1>
             <p className="legal-standfirst">{page.standfirst}</p>
 

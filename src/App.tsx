@@ -334,15 +334,15 @@ export default function App() {
       <SiteBar
         meta={
           <span className="site-bar-meta">
-            <Icon name="lock" />
-            <span className="site-bar-secure">Secure voter session</span>
-            <span className="site-bar-sep site-bar-secure">·</span>
+            <span className="site-bar-secure">
+              <Icon name="lock" />
+              Secure voter session
+            </span>
             <button type="button" className="site-bar-link" onClick={() => replayOnboarding('voter')}>
-              Tour
+              How voting works
             </button>
-            <span className="site-bar-sep">·</span>
-            <button type="button" className="site-bar-link" onClick={() => void exitPortal()}>
-              Exit portal
+            <button type="button" className="site-bar-link site-bar-link-exit" onClick={() => void exitPortal()}>
+              Exit
             </button>
           </span>
         }
@@ -353,7 +353,7 @@ export default function App() {
       </div>
 
       <SiteFoot sub="Ballot secrecy is structural, not a promise." />
-      <Onboarding id="voter" steps={VOTER_STEPS} />
+      <Onboarding id="voter" steps={VOTER_STEPS} auto={false} />
     </div>,
   )
 }

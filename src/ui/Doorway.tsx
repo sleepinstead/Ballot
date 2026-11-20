@@ -1,162 +1,68 @@
 /**
- * The selection: two doors and one statement of what this is.
+ * The front door, at `#/` and `#/enter`.
  *
- * This is the whole of the front door at `#/enter` and `#/` in its first state.
+ * It answers one question — "where do I go?" — for two very different people. A
+ * voter wants the ballot; an officer wants the console. So the page leads with
+ * both doors as plain buttons beside the headline, ahead of anything else, and
+ * everything below them is for the visitor who wants to know what this is first.
  *
- * It used to have two callers: the front door, and the second screen of a landing
- * page that argued its way down to these same two choices over four screens of
- * thesis first. Two copies of a claim about the same two doors will drift, and they
- * were one component for that reason. The landing page is gone, so this is now the
- * front door and nothing else, and it has been renamed from `ChooseDoorway` —
- * "choose" described what a screen below a claim made you do; here it is simply the
- * door.
+ * The hero's other half is a specimen ballot that can be marked. It is the
+ * product's one device — the ballot oval — doing what it does everywhere else,
+ * so a first-time visitor has already used the voting control before they reach
+ * a real ballot.
  *
- * It is still a component rather than inlined, because it is long enough to be worth
- * naming and because `AdminLogin` uses the same hero in its other two stages.
+ * `AdminLogin` renders this in its first stage and reuses `DOOR_HERO` for the
+ * footer of its other two stages.
  */
 
-import { Icon } from './Icon'
+import { useState } from 'react'
 import { AuthFrame } from './Shell'
 import { Onboarding, WELCOME_STEPS, replayOnboarding } from './Onboarding'
 
 const YEAR = new Date().getFullYear()
 
 export const DOOR_HERO = {
-  /*
-   * The eyebrow is about the product, not about signing in. It used to say
-   * "Administrator access", which was wrong the moment this page became the way in
-   * for a voter as well — the headline below is the product's argument and the two
-   * destinations under it are its entry points.
-   */
-  eyebrow: 'Election workspace',
-  headline: 'Run elections',
-  accent: 'with confidence.',
-  /*
-   * The lede, in plain words and a little longer.
-   *
-   * It was "Secure operations for every election, with clear roles and an
-   * audit-ready workspace", which was three adjectives doing the work of three
-   * facts. "Secure operations" names nothing an operator could check. "Audit-ready
-   * workspace" is the noun phrase you write when you do not want to say what the
-   * audit is. A voter or an officer reading it learns nothing about what will
-   * happen to them.
-   *
-   * It says the three things that are actually true and checkable: the whole
-   * election runs in one place, the roles decide who may do what, and the actions
-   * get written down. "Five" is `ADMIN_ROLES.length` today; if a role is ever added,
-   * this number is what has to change with it.
-   */
-  lede: 'Ballot runs the whole election from one machine. Five roles decide who may open the poll, certify the result or only read, and every administrative action is written down.',
-  /*
-   * The hero's old "Privacy-first by design" note said authentication is scoped to
-   * this workspace. The statement on the photograph says the same thing in four
-   * words, so carrying both was repetition rather than emphasis.
-   */
-  statement: 'No credentials leave this server.',
-  /*
-   * The line reversed out of the photograph, bottom-left.
-   *
-   * It was "Ballot administrator access · 2026 cycle", which named the surface
-   * twice — once here and once in the wordmark above — and then spent its second
-   * line on the word "cycle". What is worth saying here is which product this is
-   * and how old it is; the rest was the line talking about itself.
-   */
-  meta: `Ballot administrator ${YEAR}`,
+  headline: 'A polling station for clubs, councils and campuses.',
+  lede:
+    'Ballot runs a whole election from one machine: the ballot, the voter list, the count and the record of who did what. Voters confirm who they are with a one-time code, and their vote is stored without their name.',
+  statement: 'Sign-in details never leave this server.',
+  meta: `Ballot ${YEAR}`,
 }
 
-/**
- * What the product is, in one paragraph.
- *
- * On the chooser, because a visitor who has just been offered two doors is deciding
- * whether to care about either, and the answer is the same either way. Every claim
- * here is one the server actually enforces; nothing on this page is a promise the
- * product does not keep.
- */
-const ABOUT = {
-  eyebrow: 'About Ballot',
-  headline: 'A ballot is never stored against the person who cast it.',
-  detail:
-    'The roll, the one-time codes and the audit trail live on this machine and nowhere else. What a voter takes away is a receipt — the only record that a ballot was cast, and one that can be checked later without revealing the choice.',
-}
-
-/**
- * The two ways in.
- *
- * Order is deliberate: an operator arriving at a bare host is looking for the
- * console, and a voter is looking for their ballot. Both are one click, so the order
- * only has to be the more likely intent first.
- *
- * Each description is one line by design. They used to run to two, which made the
- * doors twice as tall as they needed to be and read as paragraphs rather than as
- * captions under a title. Trimming them lost nothing: the second factor is announced
- * on the form itself, live, once the server says the account has one — which is more
- * use than a line promising it in advance.
- */
-export const DESTINATIONS: {
-  id: 'admin' | 'vote'
-  label: string
-  detail: string
-}[] = [
-  {
-    id: 'admin',
-    label: 'Continue to the admin console',
-    detail: 'Sign in with your administrator credentials.',
-  },
-  {
-    id: 'vote',
-    label: 'Continue to the voter portal',
-    detail: 'Cast your ballot. No account and no password needed.',
-  },
-]
-
+/** The four stages of an election. They are a real sequence, so they are numbered. */
 const STEPS = [
-  { n: '01', title: 'Set up', detail: 'Create the election, add candidates and import the voter roll.' },
-  { n: '02', title: 'Verify', detail: 'Each voter confirms identity with a one-time code. No accounts.' },
-  { n: '03', title: 'Vote', detail: 'One ballot per voter, written without a link back to the person.' },
-  { n: '04', title: 'Certify', detail: 'Close the poll, check the tally and certify. Every step is logged.' },
+  { title: 'Set up', detail: 'Create the election, add the candidates and import the voter list.' },
+  { title: 'Verify', detail: 'Each voter enters their ID and a one-time code. No accounts, no passwords.' },
+  { title: 'Vote', detail: 'One ballot per voter, recorded with no link back to the person.' },
+  { title: 'Certify', detail: 'Close voting, check the count and certify it. Every step is logged.' },
 ]
 
 export function Doorway({ onAdmin }: { onAdmin: () => void }) {
   return (
     <AuthFrame statement={DOOR_HERO.statement} meta={DOOR_HERO.meta}>
-      <DoorHero />
-
-      <section className="landing-section" aria-label="Choose where to go next">
-        <nav className="entry-ways">
-          {DESTINATIONS.map((destination) => (
-            <button
-              key={destination.id}
-              type="button"
-              className="entry-way"
-              onClick={() => {
-                if (destination.id === 'admin') {
-                  onAdmin()
-                  return
-                }
-                window.location.hash = '#/vote'
-              }}
-            >
-              <span className="entry-way-icon" aria-hidden="true">
-                <Icon name={destination.id === 'admin' ? 'gauge' : 'vote'} />
-              </span>
-              <span className="entry-way-text">
-                <span className="entry-way-label">{destination.label}</span>
-                <span className="entry-way-detail">{destination.detail}</span>
-              </span>
-              <span className="entry-way-arrow" aria-hidden="true">
-                <Icon name="arrow-right" />
-              </span>
+      <section className="door-hero" aria-labelledby="door-title">
+        <div className="door-hero-copy">
+          <h1 id="door-title">{DOOR_HERO.headline}</h1>
+          <p className="door-lede">{DOOR_HERO.lede}</p>
+          <div className="door-actions">
+            <a href="#/vote" className="btn-primary btn-lg">
+              Vote in an election
+            </a>
+            <button type="button" className="btn-outline btn-lg" onClick={onAdmin}>
+              Sign in to manage elections
             </button>
-          ))}
-        </nav>
+          </div>
+          <p className="door-note">Voters don&rsquo;t need an account or a password.</p>
+        </div>
+        <SpecimenBallot />
       </section>
 
-      <section className="landing-section" aria-label="How it works">
-        <span className="eyebrow">How it works</span>
+      <section className="door-section" aria-labelledby="door-steps">
+        <h2 id="door-steps" className="door-section-title">How an election runs</h2>
         <ol className="landing-steps">
-          {STEPS.map((step) => (
-            <li key={step.n} className="landing-step">
-              <span className="landing-step-n">{step.n}</span>
+          {STEPS.map((step, index) => (
+            <li key={step.title} className="landing-step">
+              <span className="landing-step-n" aria-hidden="true">{index + 1}</span>
               <h3>{step.title}</h3>
               <p>{step.detail}</p>
             </li>
@@ -164,54 +70,70 @@ export function Doorway({ onAdmin }: { onAdmin: () => void }) {
         </ol>
       </section>
 
-      <section className="landing-section entry-about" aria-label="About Ballot">
-        <span className="eyebrow">{ABOUT.eyebrow}</span>
-        <p className="entry-about-headline">{ABOUT.headline}</p>
-        <p className="entry-about-detail">{ABOUT.detail}</p>
+      <section className="door-section entry-about" aria-labelledby="door-about">
+        <h2 id="door-about" className="entry-about-headline">
+          A ballot is never stored against the person who cast it.
+        </h2>
+        <p className="entry-about-detail">
+          The voter list, the one-time codes and the audit log stay on this machine. What a voter takes away is a
+          receipt code: proof that their ballot was counted, which can be checked later without revealing their
+          choice.
+        </p>
         <button type="button" className="link-button" onClick={() => replayOnboarding('welcome')}>
-          Take the quick tour
+          Take the two-minute tour
         </button>
       </section>
 
-      <Onboarding id="welcome" steps={WELCOME_STEPS} />
+      <Onboarding id="welcome" steps={WELCOME_STEPS} auto={false} />
     </AuthFrame>
   )
 }
 
-/**
- * The hero, above the doors: a status pill, the headline, one sentence, and a
- * small product preview built from the same cards the app itself uses.
- */
-export function DoorHero() {
-  return (
-    <div className="auth-hero">
-      <div className="auth-hero-copy">
-        <span className="landing-pill">
-          <span className="landing-pill-dot" aria-hidden="true" />
-          {DOOR_HERO.eyebrow}
-        </span>
-        <h1>
-          {DOOR_HERO.headline}
-          <span className="accent">{DOOR_HERO.accent}</span>
-        </h1>
-        <p className="auth-hero-lede">{DOOR_HERO.lede}</p>
-      </div>
+const SPECIMEN = ['Amara Rivera', 'Malik Okafor', 'Johanna Lindqvist']
 
-      <div className="landing-preview" aria-hidden="true">
-        <div className="lp-card lp-ballot">
-          <span className="lp-label">Ballot</span>
-          <div className="lp-title">Student council president</div>
-          <div className="lp-option lp-on"><span className="lp-radio" />A. Rivera</div>
-          <div className="lp-option"><span className="lp-radio" />M. Okafor</div>
-          <div className="lp-option"><span className="lp-radio" />J. Lindqvist</div>
-          <div className="lp-btn">Cast ballot</div>
+/**
+ * A ballot a visitor can mark.
+ *
+ * Nothing is sent anywhere. Marking an oval fills it and tears off a sample
+ * receipt, which is the whole voting experience in miniature.
+ */
+function SpecimenBallot() {
+  const [marked, setMarked] = useState<number | null>(null)
+
+  return (
+    <div className="specimen" role="group" aria-labelledby="specimen-title">
+      <div className="specimen-sheet">
+        <div className="specimen-head">
+          <span className="specimen-kicker">Specimen ballot</span>
+          <p className="specimen-title" id="specimen-title">Student council president</p>
         </div>
-        <div className="lp-card lp-receipt">
-          <span className="lp-label">Receipt</span>
-          <div className="lp-hash">7F3A·91C2·E04B</div>
-          <div className="lp-meter"><span /></div>
-          <div className="lp-meta"><span>Turnout</span><span>68%</span></div>
-        </div>
+        <p className="specimen-instr">Mark one choice. Try it — nothing is recorded.</p>
+        <ul className="specimen-options">
+          {SPECIMEN.map((name, index) => (
+            <li key={name}>
+              <button
+                type="button"
+                className={`specimen-option${marked === index ? ' is-marked' : ''}`}
+                aria-pressed={marked === index}
+                onClick={() => setMarked(marked === index ? null : index)}
+              >
+                <span className="specimen-oval" aria-hidden="true" />
+                {name}
+              </button>
+            </li>
+          ))}
+        </ul>
+      </div>
+      <div className={`specimen-stub${marked !== null ? ' is-shown' : ''}`} aria-live="polite">
+        {marked !== null ? (
+          <>
+            <span className="specimen-stub-label">Receipt code</span>
+            <span className="specimen-stub-code">7F3A-91C2-E04B</span>
+            <span className="specimen-stub-note">Proves the ballot was counted. Doesn&rsquo;t show the choice.</span>
+          </>
+        ) : (
+          <span className="specimen-stub-note">Your receipt appears here once you mark a choice.</span>
+        )}
       </div>
     </div>
   )

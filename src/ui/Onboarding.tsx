@@ -124,10 +124,13 @@ export function Onboarding({
   id,
   steps,
   delayMs = 700,
+  auto = true,
 }: {
   id: string
   steps: OnboardingStep[]
   delayMs?: number
+  /** Open by itself on a first visit. Off where a tour would cover the page's main action. */
+  auto?: boolean
 }) {
   const [open, setOpen] = useState(false)
   const [index, setIndex] = useState(0)
@@ -135,9 +138,10 @@ export function Onboarding({
 
   useEffect(() => {
     if (seen(id)) return
+    if (!auto) return
     const timer = window.setTimeout(() => setOpen(true), delayMs)
     return () => window.clearTimeout(timer)
-  }, [id, delayMs])
+  }, [id, delayMs, auto])
 
   useEffect(() => {
     const onReplay = (event: Event) => {
