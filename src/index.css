@@ -14,8 +14,8 @@
  *     completed mark: primary buttons, ticked boxes, finished steps.
  *   · Status has real colour, always paired with a word: open is green,
  *     scheduled amber, paused orange, closed grey, certified violet.
- *   · Buttons and fields are square-cut with a heavier bottom edge; sheets have
- *     a 4px corner and a hairline, not a floating shadow.
+ *   · Buttons and fields are square-cut, and only the main action on a screen
+ *     has depth; sheets have a 4px corner and a hairline, not a floating shadow.
  *   · Light is the default; dark follows the system or an explicit choice.
  *
  * Older token names (--green, --amber, --red, --navy…) are kept as aliases so
@@ -50,8 +50,6 @@
   --band: #16132a;
   --band-ink: #f4f2fb;
   --band-muted: #aaa6c2;
-  /* The side face under a white key button. */
-  --key-depth: var(--ink-base);
 
   /* Status */
   --open: #0b7a4b;
@@ -203,7 +201,6 @@
     --band: #2a2640;
     --band-ink: #f4f2fb;
     --band-muted: #b2aecb;
-    --key-depth: #3d3856;
     --open: #5cc796;
     --open-soft: rgb(92 199 150 / 0.12);
     --open-line: rgb(92 199 150 / 0.32);
@@ -249,7 +246,6 @@
   --band: #2a2640;
   --band-ink: #f4f2fb;
   --band-muted: #b2aecb;
-  --key-depth: #3d3856;
   --open: #5cc796;
   --open-soft: rgb(92 199 150 / 0.12);
   --open-line: rgb(92 199 150 / 0.32);
@@ -1510,16 +1506,8 @@ p { text-wrap: pretty; }
 }
 .site-bar-link:hover,
 .site-bar-meta a:hover { background: var(--card-soft); border-color: var(--border); color: var(--ink); }
-.site-bar-link-exit {
-  background: var(--sheet);
-  border: 1.5px solid var(--ink);
-  color: var(--ink);
-  box-shadow: 0 3px 0 var(--key-depth);
-  margin-bottom: 3px;
-  transition: background 120ms ease, transform 90ms ease, box-shadow 90ms ease;
-}
-.site-bar-link-exit:hover { background: var(--card-soft); border-color: var(--ink); transform: translateY(-1px); box-shadow: 0 4px 0 var(--key-depth); }
-.site-bar-link-exit:active { transform: translateY(3px); box-shadow: 0 0 0 var(--ink); }
+.site-bar-link-exit { border-color: var(--border-strong); }
+
 .site-bar-sep { display: none; }
 .site-bar-theme { margin-left: 4px; }
 
@@ -1581,16 +1569,17 @@ p { text-wrap: pretty; }
    ======================================== */
 
 /*
- * Square and three-dimensional. Every button sits on a solid base in a darker
- * shade of its own face colour, with a faint highlight across the top, so it
- * reads as a key standing proud of the page. Hover lifts it a pixel higher;
- * pressing sinks it flush onto its base. The base colour is derived from the
- * face with color-mix, so every variant gets a matching edge in both themes.
+ * Square-cut. Only the main action on a screen is dimensional: a primary
+ * button carries a darker edge along its bottom and a faint highlight across
+ * its top, drawn inside its own box, so it never shifts the layout, never
+ * spills out of a scrolling container, and never moves on hover. Pressing
+ * settles it by a pixel. Everything else is flat.
  *
- *   · Primary — election ink. One per view, for the step that moves things on.
- *   · Secondary — a white key with an ink outline.
- *   · Quiet — flat text until hovered, then it rises like the others.
- *   · Destructive — a white key outlined in red; the final confirmation is solid red.
+ *   · Primary — election ink, with depth. One per view.
+ *   · Inline primary — the same ink, flat, for dense admin rows and toolbars.
+ *   · Secondary — white with a hairline.
+ *   · Quiet — text on nothing.
+ *   · Destructive — tinted red; filled red only on the final confirmation.
  */
 .btn,
 .btn-primary,
@@ -1605,88 +1594,78 @@ p { text-wrap: pretty; }
 .btn-navy,
 .btn-ghost,
 .btn-danger {
-  --btn-face: var(--sheet);
-  --btn-depth: color-mix(in srgb, var(--btn-face) 70%, #000);
-  --btn-lift: 4px;
-  position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 9px;
-  height: 42px;
-  padding: 0 18px;
-  margin-bottom: var(--btn-lift);
-  border: 1.5px solid transparent;
+  gap: 8px;
+  height: 40px;
+  padding: 0 17px;
+  border: 1px solid transparent;
   border-radius: 0;
-  background-color: var(--btn-face);
-  background-image: linear-gradient(180deg, rgb(255 255 255 / 0.16), rgb(255 255 255 / 0) 55%);
-  box-shadow:
-    0 var(--btn-lift) 0 var(--btn-depth),
-    0 calc(var(--btn-lift) + 3px) 10px -3px rgb(0 0 0 / 0.28);
   font-family: inherit;
-  font-size: 14.5px;
-  font-weight: 650;
+  font-size: 14px;
+  font-weight: 600;
   letter-spacing: -0.005em;
   line-height: 1;
   white-space: nowrap;
   text-decoration: none;
   cursor: pointer;
-  transform: translateY(0);
-  transition: background-color 120ms ease, border-color 120ms ease, color 120ms ease, box-shadow 90ms ease, transform 90ms ease;
+  transition: background-color 120ms ease, border-color 120ms ease, color 120ms ease, box-shadow 120ms ease;
 }
 :is(.btn, .btn-primary, .btn-solid, .btn-confirm, .btn-primary-inline, .btn-submit-ballot, .btn-lifecycle,
   .btn-outline, .btn-cancel, .btn-secondary, .btn-navy, .btn-ghost, .btn-danger) svg { width: 16px; height: 16px; }
 :is(.btn, .btn-primary, .btn-solid, .btn-confirm, .btn-primary-inline, .btn-submit-ballot, .btn-lifecycle,
-  .btn-outline, .btn-cancel, .btn-secondary, .btn-navy, .btn-ghost, .btn-danger):hover:not(:disabled) {
-  transform: translateY(-1px);
-  box-shadow:
-    0 calc(var(--btn-lift) + 1px) 0 var(--btn-depth),
-    0 calc(var(--btn-lift) + 5px) 14px -4px rgb(0 0 0 / 0.3);
-}
-:is(.btn, .btn-primary, .btn-solid, .btn-confirm, .btn-primary-inline, .btn-submit-ballot, .btn-lifecycle,
-  .btn-outline, .btn-cancel, .btn-secondary, .btn-navy, .btn-ghost, .btn-danger):active:not(:disabled) {
-  transform: translateY(var(--btn-lift));
-  box-shadow: 0 0 0 var(--btn-depth), inset 0 2px 3px rgb(0 0 0 / 0.18);
-  transition-duration: 50ms;
-}
-:is(.btn, .btn-primary, .btn-solid, .btn-confirm, .btn-primary-inline, .btn-submit-ballot, .btn-lifecycle,
   .btn-outline, .btn-cancel, .btn-secondary, .btn-navy, .btn-ghost, .btn-danger):focus-visible {
   outline: 2px solid var(--mark);
-  outline-offset: 3px;
+  outline-offset: 2px;
   border-radius: 0;
 }
 :is(.btn, .btn-primary, .btn-solid, .btn-confirm, .btn-primary-inline, .btn-submit-ballot, .btn-lifecycle,
   .btn-outline, .btn-cancel, .btn-secondary, .btn-navy, .btn-ghost, .btn-danger):disabled {
-  --btn-face: var(--bg-sunken);
-  --btn-depth: var(--border);
-  --btn-lift: 2px;
   cursor: not-allowed;
-  border-color: var(--border);
+  background: var(--bg-sunken);
   background-image: none;
+  border-color: var(--border);
   color: var(--muted-2);
-  box-shadow: 0 var(--btn-lift) 0 var(--btn-depth);
-  transform: translateY(var(--btn-lift));
-  margin-bottom: var(--btn-lift);
+  box-shadow: none;
 }
 
-/* Primary: election ink. */
+/* Primary, with depth: the edge and highlight live inside the box. */
 .btn-primary,
 .btn-solid,
 .btn-confirm,
+.btn-submit-ballot {
+  --btn-edge: color-mix(in srgb, var(--mark) 60%, #000);
+  background-color: var(--mark);
+  background-image: linear-gradient(180deg, rgb(255 255 255 / 0.14), rgb(255 255 255 / 0) 60%);
+  border-color: var(--btn-edge);
+  color: var(--mark-ink);
+  box-shadow:
+    inset 0 -3px 0 var(--btn-edge),
+    inset 0 1px 0 rgb(255 255 255 / 0.2),
+    0 1px 2px rgb(0 0 0 / 0.12);
+}
+:is(.btn-primary, .btn-solid, .btn-confirm, .btn-submit-ballot):hover:not(:disabled) { background-color: var(--mark-hover); }
+:is(.btn-primary, .btn-solid, .btn-confirm, .btn-submit-ballot):active:not(:disabled) {
+  background-image: none;
+  box-shadow: inset 0 2px 3px rgb(0 0 0 / 0.25);
+}
+
+/* Inline primary: the same ink, flat, for dense rows. */
 .btn-primary-inline,
-.btn-submit-ballot,
 .btn-lifecycle,
 .btn-lifecycle-publish,
 .btn-lifecycle-open {
-  --btn-face: var(--mark);
-  --btn-depth: color-mix(in srgb, var(--mark) 58%, #000);
-  border-color: var(--btn-depth);
+  background: var(--mark);
+  border-color: var(--mark);
   color: var(--mark-ink);
 }
-:is(.btn-primary, .btn-solid, .btn-confirm, .btn-primary-inline, .btn-submit-ballot, .btn-lifecycle,
-  .btn-lifecycle-publish, .btn-lifecycle-open):hover:not(:disabled) { --btn-face: var(--mark-hover); }
+:is(.btn-primary-inline, .btn-lifecycle, .btn-lifecycle-publish, .btn-lifecycle-open):hover:not(:disabled) {
+  background: var(--mark-hover);
+  border-color: var(--mark-hover);
+}
 
-/* Secondary: a white key with an ink outline and an ink base. */
+/* Secondary: white with a hairline. */
 .btn-outline,
 .btn-cancel,
 .btn-secondary,
@@ -1694,78 +1673,48 @@ p { text-wrap: pretty; }
 .btn-lifecycle-close,
 .btn-lifecycle-archive,
 .btn-lifecycle-unpublish {
-  --btn-face: var(--sheet);
-  --btn-depth: var(--key-depth);
-  border-color: var(--ink);
-  color: var(--ink);
-  background-image: none;
-}
-:is(.btn-outline, .btn-cancel, .btn-secondary, .btn-navy, .btn-lifecycle-close, .btn-lifecycle-archive,
-  .btn-lifecycle-unpublish):hover:not(:disabled) { --btn-face: var(--card-soft); }
-
-/* Quiet: flat text at rest, rises into a key when hovered. */
-.btn-ghost {
-  --btn-face: transparent;
-  --btn-depth: transparent;
-  border-color: transparent;
-  background-image: none;
-  box-shadow: none;
-  color: var(--ink-2);
-}
-.btn-ghost:hover:not(:disabled) {
-  --btn-face: var(--sheet);
-  --btn-depth: var(--border-strong);
+  background: var(--sheet);
   border-color: var(--border-strong);
   color: var(--ink);
 }
-
-/* Destructive: outlined in red; the final confirmation is solid red. */
-.btn-danger {
-  --btn-face: var(--sheet);
-  --btn-depth: var(--stop);
-  border-color: var(--stop);
-  color: var(--stop);
-  background-image: none;
+:is(.btn-outline, .btn-cancel, .btn-secondary, .btn-navy, .btn-lifecycle-close, .btn-lifecycle-archive,
+  .btn-lifecycle-unpublish):hover:not(:disabled) {
+  background: var(--card-soft);
+  border-color: var(--ink);
 }
-.btn-danger:hover:not(:disabled) { --btn-face: var(--stop-soft); }
+
+/* Quiet. */
+.btn-ghost { background: transparent; border-color: transparent; color: var(--ink-2); }
+.btn-ghost:hover:not(:disabled) { background: rgb(var(--overlay) / 0.06); color: var(--ink); }
+
+/* Destructive. */
+.btn-danger {
+  background: var(--stop-soft);
+  border-color: var(--stop-line);
+  color: var(--stop);
+}
+.btn-danger:hover:not(:disabled) { border-color: var(--stop); }
 .btn-confirm-danger,
 .btn-confirm.btn-confirm-danger {
-  --btn-face: var(--stop);
-  --btn-depth: color-mix(in srgb, var(--stop) 58%, #000);
-  border-color: var(--btn-depth);
+  --btn-edge: color-mix(in srgb, var(--stop) 60%, #000);
+  background-color: var(--stop);
+  border-color: var(--btn-edge);
   color: #fff;
 }
 .btn-confirm-danger:hover:not(:disabled),
-.btn-confirm.btn-confirm-danger:hover:not(:disabled) { --btn-face: color-mix(in srgb, var(--stop) 90%, #fff); }
+.btn-confirm.btn-confirm-danger:hover:not(:disabled) { background-color: color-mix(in srgb, var(--stop) 90%, #fff); }
 
-/* Suspending voting is a caution: an orange-outlined key. */
-.btn-lifecycle-pause {
-  --btn-face: var(--sheet);
-  --btn-depth: var(--hold);
-  border-color: var(--hold);
-  color: var(--hold);
-  background-image: none;
-}
-.btn-lifecycle-pause:hover:not(:disabled) { --btn-face: var(--hold-soft); }
-
-/* Certifying is final: a solid ink key. */
-.btn-lifecycle-certify {
-  --btn-face: var(--ink);
-  --btn-depth: color-mix(in srgb, var(--ink) 55%, #000);
-  border-color: var(--btn-depth);
-  color: var(--bg);
-}
-.btn-lifecycle-certify:hover:not(:disabled) { --btn-face: var(--ink-2); }
+/* Suspending voting is a caution; certifying is final. */
+.btn-lifecycle-pause { background: var(--hold-soft); border-color: var(--hold-line); color: var(--hold); }
+.btn-lifecycle-pause:hover:not(:disabled) { background: var(--hold-soft); border-color: var(--hold); }
+.btn-lifecycle-certify { background: var(--ink); border-color: var(--ink); color: var(--bg); }
+.btn-lifecycle-certify:hover:not(:disabled) { background: var(--ink-2); border-color: var(--ink-2); }
 
 .btn-lifecycle-disabled,
 .btn-lifecycle-disabled:hover {
-  --btn-face: var(--bg-sunken);
-  --btn-depth: var(--border);
+  background: var(--bg-sunken);
   border-color: var(--border);
-  background-image: none;
   color: var(--muted-2);
-  box-shadow: 0 2px 0 var(--border);
-  transform: translateY(2px);
   cursor: not-allowed;
 }
 .btn-lifecycle-lock {
@@ -1778,49 +1727,40 @@ p { text-wrap: pretty; }
 }
 .btn-lifecycle-lock svg { width: 12px; height: 12px; }
 .btn-lifecycle-disabled .btn-lifecycle-lock { display: none; }
+.btn-lifecycle-elevated { position: relative; }
 
-/* Sizes. Bigger keys stand taller. */
+/* Sizes */
 .btn-block { width: 100%; }
 .btn-lg,
 .btn-primary.btn-lg,
 .btn-outline.btn-lg,
-.btn-submit-ballot { --btn-lift: 5px; height: 50px; padding: 0 24px; font-size: 15.5px; }
+.btn-submit-ballot { height: 48px; padding: 0 22px; font-size: 15px; }
 .btn-primary-inline,
 .btn-lifecycle,
 .btn-danger,
-.btn-navy { --btn-lift: 3px; height: 38px; padding: 0 14px; font-size: 14px; }
-.btn-confirm-small { --btn-lift: 3px; height: 32px; padding: 0 12px; font-size: 13px; }
+.btn-navy { height: 36px; padding: 0 14px; font-size: 13.5px; }
+.btn-confirm-small { height: 32px; padding: 0 12px; font-size: 12.5px; }
 .btn-submit-ballot { width: auto; }
 .btn-lifecycle.btn-lifecycle-elevated { padding-right: 32px; }
 
-/* Icon-only: a small key, flat until hovered. */
+/* Icon-only. */
 .btn-icon {
-  --btn-depth: transparent;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 38px;
-  height: 38px;
+  width: 36px;
+  height: 36px;
   background: transparent;
   color: var(--ink-2);
-  border: 1.5px solid transparent;
+  border: 1px solid transparent;
   border-radius: 0;
   cursor: pointer;
   flex: none;
   position: relative;
-  box-shadow: 0 0 0 var(--btn-depth);
-  transition: background 120ms ease, border-color 120ms ease, color 120ms ease, box-shadow 90ms ease, transform 90ms ease;
+  transition: background 120ms ease, border-color 120ms ease, color 120ms ease;
 }
 .btn-icon svg { width: 18px; height: 18px; }
-.btn-icon:hover {
-  --btn-depth: var(--key-depth);
-  background: var(--sheet);
-  border-color: var(--ink);
-  color: var(--ink);
-  transform: translateY(-3px);
-  box-shadow: 0 3px 0 var(--btn-depth);
-}
-.btn-icon:active { transform: translateY(0); box-shadow: 0 0 0 var(--btn-depth); transition-duration: 50ms; }
+.btn-icon:hover { background: var(--sheet); border-color: var(--border-strong); color: var(--ink); }
 .btn-icon:focus-visible { border-radius: 0; }
 .btn-icon-sm { width: 30px; height: 30px; }
 .btn-icon-sm svg { width: 15px; height: 15px; }
@@ -2445,16 +2385,14 @@ p { text-wrap: pretty; }
 .election-row:hover .election-row-action svg { transform: translateX(2px); }
 /* "Vote" is the one action on this page that matters most, so it is a button. */
 .election-row-open .election-row-action {
-  height: 38px;
+  height: 36px;
   padding: 0 12px 0 16px;
-  background: var(--mark) linear-gradient(180deg, rgb(255 255 255 / 0.16), rgb(255 255 255 / 0) 55%);
-  border: 1.5px solid color-mix(in srgb, var(--mark) 58%, #000);
+  background: var(--mark) linear-gradient(180deg, rgb(255 255 255 / 0.14), rgb(255 255 255 / 0) 60%);
+  border: 1px solid color-mix(in srgb, var(--mark) 60%, #000);
   color: var(--mark-ink);
-  box-shadow: 0 3px 0 color-mix(in srgb, var(--mark) 58%, #000), 0 6px 10px -3px rgb(0 0 0 / 0.28);
-  transition: transform 90ms ease, box-shadow 90ms ease;
+  box-shadow: inset 0 -3px 0 color-mix(in srgb, var(--mark) 60%, #000), inset 0 1px 0 rgb(255 255 255 / 0.2);
 }
-.election-row-open:hover .election-row-action { transform: translateY(-1px); box-shadow: 0 4px 0 color-mix(in srgb, var(--mark) 58%, #000), 0 8px 14px -4px rgb(0 0 0 / 0.3); }
-.election-row-open:active .election-row-action { transform: translateY(3px); box-shadow: 0 0 0 transparent; }
+.election-row-open:hover .election-row-action { background-color: var(--mark-hover); color: var(--mark-ink); }
 
 /* ---- The frame inside an election ---- */
 .voter-frame-top {
@@ -2846,21 +2784,19 @@ p { text-wrap: pretty; }
   justify-content: center;
   gap: 7px;
   margin-top: 16px;
-  margin-bottom: 3px;
-  height: 36px;
+  height: 34px;
   padding: 0 14px;
   background: var(--sheet);
-  border: 1.5px solid var(--ink);
-  box-shadow: 0 3px 0 var(--key-depth);
+  border: 1px solid var(--border-strong);
   color: var(--ink);
   font-size: 13.5px;
-  font-weight: 650;
+  font-weight: 600;
   cursor: pointer;
-  transition: background 120ms ease, transform 90ms ease, box-shadow 90ms ease;
+  transition: background 120ms ease, border-color 120ms ease;
 }
-.receipt-copy:active { transform: translateY(3px); box-shadow: 0 0 0 var(--ink); }
+
 .receipt-copy svg { width: 15px; height: 15px; }
-.receipt-copy:hover { background: var(--card-soft); transform: translateY(-1px); box-shadow: 0 4px 0 var(--key-depth); }
+.receipt-copy:hover { background: var(--card-soft); border-color: var(--ink); }
 .receipt-note { padding: 0 34px 22px; background: var(--bg-sunken); text-align: center; }
 .receipt-note p { font-size: 13px; color: var(--muted); line-height: 1.55; max-width: 56ch; margin: 0 auto; }
 .receipt-note code { font-size: 12px; color: var(--ink-2); }
@@ -3189,15 +3125,8 @@ p { text-wrap: pretty; }
   color: var(--band-ink);
 }
 .onboarding-btn:hover { background: rgb(255 255 255 / 0.1); }
-.onboarding-btn-primary {
-  background: var(--band-ink);
-  color: var(--band);
-  border-color: color-mix(in srgb, var(--band-ink) 60%, #000);
-  box-shadow: 0 3px 0 color-mix(in srgb, var(--band-ink) 60%, #000);
-  transition: transform 90ms ease, box-shadow 90ms ease;
-}
-.onboarding-btn-primary:hover { background: var(--band-ink); transform: translateY(-1px); box-shadow: 0 4px 0 color-mix(in srgb, var(--band-ink) 60%, #000); }
-.onboarding-btn-primary:active { transform: translateY(3px); box-shadow: 0 0 0 transparent; }
+.onboarding-btn-primary { background: var(--band-ink); color: var(--band); }
+.onboarding-btn-primary:hover { background: var(--band-ink); opacity: 0.9; }
 
 .ob-art { width: 78%; display: flex; flex-direction: column; gap: 10px; }
 .ob-row { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border: 1px solid var(--border); border-radius: var(--r-sm); }
