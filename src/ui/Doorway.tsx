@@ -11,8 +11,8 @@
  * so a first-time visitor has already used the voting control before they reach
  * a real ballot.
  *
- * `AdminLogin` renders this in its first stage and reuses `DOOR_HERO` for the
- * footer of its other two stages.
+ * The administrator door is a link to `#/admin`, which is the sign-in page while
+ * signed out.
  */
 
 import { useState } from 'react'
@@ -37,7 +37,7 @@ const STEPS = [
   { title: 'Certify', detail: 'Close voting, check the count and certify it. Every step is logged.' },
 ]
 
-export function Doorway({ onAdmin }: { onAdmin: () => void }) {
+export function Doorway() {
   return (
     <AuthFrame statement={DOOR_HERO.statement} meta={DOOR_HERO.meta}>
       <section className="door-hero" aria-labelledby="door-title">
@@ -48,9 +48,9 @@ export function Doorway({ onAdmin }: { onAdmin: () => void }) {
             <a href="#/vote" className="btn-primary btn-lg">
               Vote in an election
             </a>
-            <button type="button" className="btn-outline btn-lg" onClick={onAdmin}>
+            <a href="#/admin" className="btn-outline btn-lg">
               Sign in to manage elections
-            </button>
+            </a>
           </div>
           <p className="door-note">Voters don&rsquo;t need an account or a password.</p>
         </div>

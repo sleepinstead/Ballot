@@ -29,7 +29,7 @@ import {
   type Bootstrap,
 } from './lib/api'
 import { AdminApp } from './admin/AdminApp'
-import { AdminLogin } from './admin/AdminLogin'
+import { Doorway } from './ui/Doorway'
 import { VoterFlow } from './voter/VoterFlow'
 import { SiteBar, SiteFoot } from './ui/Shell'
 import { LegalPage, isLegalPage, type LegalPageId } from './ui/LegalPages'
@@ -291,25 +291,14 @@ export default function App() {
   const serverOffsetMs = getServerOffset()
 
   /*
-   * The front door, and what a bare host lands on. It renders the same sign-in
-   * component the console does: the photograph and the argument, the two ways in,
-   * and the administrator form swapping into the same page rather than by
-   * navigating away — so the page the reader chose is still the page behind the
-   * form. This is what a bookmark, a shared link and a refresh land on, which is
-   * why the door is a route rather than a state inside anything else.
-   *
-   * Signing in hands over to `#/admin`, because that is where the console
-   * actually lives and the two must not end up rendering each other.
+   * The front door, and what a bare host lands on: the landing page with its two
+   * ways in. The administrator way in is a link to `#/admin`, which shows the
+   * sign-in page while signed out, so sign-in has an address of its own that can
+   * be bookmarked and refreshed.
    */
   if (surface === 'start') {
     return frame(
-      <AdminLogin
-        needsBootstrap={!bootstrap.admins_exist}
-        onAuthenticated={() => {
-          window.location.hash = '#/admin'
-          void load()
-        }}
-      />,
+      <Doorway />,
     )
   }
 
@@ -322,6 +311,7 @@ export default function App() {
       <AdminApp
         serverOffsetMs={serverOffsetMs}
         needsBootstrap={!bootstrap.admins_exist}
+        publicElections={bootstrap.elections}
         session={bootstrap.session}
         onSessionChange={() => void load()}
         onChanged={() => void load()}

@@ -109,18 +109,21 @@ function useWorkspaceLabel(): { name: string; cycle: string } {
 export function AdminApp({
   serverOffsetMs,
   needsBootstrap,
+  publicElections,
   session,
   onSessionChange,
   onChanged,
 }: {
   serverOffsetMs: number
   needsBootstrap: boolean
+  /** The public election list, shown on the sign-in page. */
+  publicElections?: ElectionSummary[]
   session: ClientSession | null
   onSessionChange: (session: ClientSession | null) => void
   onChanged: () => void
 }) {
   if (needsBootstrap || !session) {
-    return <AdminLogin needsBootstrap={needsBootstrap} onAuthenticated={onSessionChange} />
+    return <AdminLogin needsBootstrap={needsBootstrap} elections={publicElections} onAuthenticated={onSessionChange} />
   }
   return (
     <ElevationProvider>

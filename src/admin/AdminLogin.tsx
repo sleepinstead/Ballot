@@ -1,9 +1,8 @@
 /**
- * The front door, and the administrator sign-in behind it.
+ * The administrator sign-in, at `#/admin` while signed out.
  *
- * Four states, because the server and the two destinations distinguish them:
- * choosing which way in, creating the first account, submitting a password, and
- * satisfying a second factor.
+ * Three states, because the server distinguishes them: creating the first
+ * account, submitting a password, and satisfying a second factor.
  *
  * A password alone never opens a session once a second factor is configured. The
  * server returns "a second factor is required" instead of a session, and this
@@ -11,43 +10,53 @@
  * than an extra field on the form: a hidden field would invite a client to send
  * a password and a code together, which is exactly what must not happen.
  *
- * The chooser comes first on every unauthenticated route, including `#/admin`.
- * It used to be opt-in per route, which meant a bookmarked console link dropped
- * someone straight into a password field with no explanation of what else the
- * product is — a state no visitor had asked for and one they could not back out
- * of. One rule now: signed out, you get the choice.
+ * The page is a split screen. The left half is the election office: what this
+ * server is running right now, read from the same public list the voter portal
+ * shows, so an officer sees the state of things before they sign in. The right
+ * half is the form and nothing else. A voter who lands here by mistake gets a
+ * direct link to the portal at the top of the form, which replaces the chooser
+ * this route used to put in front of everyone.
  */
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { authApi } from '../lib/api'
 import type { ClientSession } from '../lib/adminTypes'
+import type { ElectionSummary } from '../lib/types'
 import { Icon } from '../ui/Icon'
-import { AuthFrame } from '../ui/Shell'
-import { Doorway, DOOR_HERO } from '../ui/Doorway'
-import { Alert, DemoNote, Field } from '../ui/primitives'
+import { Brand } from '../ui/Shell'
+import { ThemeToggle } from '../ui/ThemeToggle'
+import { Alert, StatusBadge } from '../ui/primitives'
 
-type Stage = 'choose' | 'password' | 'mfa'
+type Stage = 'password' | 'mfa'
 
 export function AdminLogin({
   needsBootstrap,
+  elections = [],
   onAuthenticated,
 }: {
   needsBootstrap: boolean
+  /** The public election list, for the office panel. Never anything private. */
+  elections?: ElectionSummary[]
   onAuthenticated: (session: ClientSession) => void
 }) {
-  // A server with no accounts has nothing to sign in *to*, so the chooser's
-  // administrator row would lead nowhere. That is the one case that skips it.
-  const [stage, setStage] = useState<Stage>(needsBootstrap ? 'password' : 'choose')
+  const [stage, setStage] = useState<Stage>('password')
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
+  const [capsLock, setCapsLock] = useState(false)
   const [displayName, setDisplayName] = useState('')
   const [code, setCode] = useState('')
   const [mfaKnown, setMfaKnown] = useState<boolean | null>(null)
+  const [helpOpen, setHelpOpen] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+  const passwordRef = useRef<HTMLInputElement>(null)
 
-  // Ask the server whether this account has a second factor, so the form can say
-  // so before the password is submitted rather than surprising the operator.
+  /*
+   * Whether this account has a second factor, looked up while the username is
+   * typed, so the screen can say "you'll be asked for a code next" before the
+   * password is sent. Debounced, and only for usernames long enough to be real.
+   */
   useEffect(() => {
     if (needsBootstrap || username.trim().length < 3) {
       setMfaKnown(null)
@@ -69,9 +78,7 @@ export function AdminLogin({
     event.preventDefault()
     setBusy(true)
     setError(null)
-    // The two calls have deliberately different result shapes: bootstrap always
-    // returns a session, whereas sign-in may instead say a second factor is
-    // required, and no session exists yet.
+
     if (needsBootstrap) {
       const created = await authApi.bootstrap({ username, password, display_name: displayName })
       setBusy(false)
@@ -82,10 +89,13 @@ export function AdminLogin({
       onAuthenticated(created.value.session)
       return
     }
+
     const signedIn = await authApi.login(username, password)
     setBusy(false)
     if (!signedIn.ok) {
       setError(signedIn.error)
+      setPassword('')
+      passwordRef.current?.focus()
       return
     }
     if (signedIn.value.mfaRequired || !signedIn.value.session) {
@@ -108,235 +118,257 @@ export function AdminLogin({
     onAuthenticated(result.value.session)
   }
 
-  if (stage === 'choose') {
-    /*
-      The chooser, from `ui/Doorway`.
-
-      It lives there because it used to have two callers — this, and the second
-      screen of a landing page that argued its way down to the same two doors. That
-      page is gone, so this is the door and nothing else, and the component is the
-      door rather than a thing one chooses between.
-
-      The administrator door swaps the sign-in form into this same half of the
-      screen, because navigating would throw away the page the visitor chose and
-      there is nothing on the far side worth coming back to.
-    */
-    return <Doorway onAdmin={() => setStage('password')} />
-  }
-
-  if (stage === 'mfa') {
-    return (
-      <AuthFrame statement={DOOR_HERO.statement} meta={DOOR_HERO.meta}>
-        <div className="auth-frame-work">
-          <button type="button" className="entry-back" onClick={() => { setStage('password'); setCode(''); setError(null) }}>
-            <Icon name="arrow-left" />
-            All ways in
-          </button>
-
-          <form className="auth-card" onSubmit={submitCode}>
-              <div className="auth-card-head">
-                <div>
-                  <span className="eyebrow">Step 2 of 2</span>
-                  <h2>Verify it&rsquo;s you</h2>
-                </div>
-              </div>
-              <p className="card-subtitle">
-                Enter the six-digit code from your authenticator app to finish signing in as <strong>{username}</strong>.
-              </p>
-
-              {error && (
-                <div style={{ marginTop: 16 }}>
-                  <Alert tone="error">{error}</Alert>
-                </div>
-              )}
-
-              <div style={{ marginTop: 20 }}>
-                <Field label="Verification code" htmlFor="admin-code">
-                  <input
-                    id="admin-code"
-                    className="data"
-                    value={code}
-                    onChange={(event) => setCode(event.target.value)}
-                    autoComplete="one-time-code"
-                    inputMode="numeric"
-                    maxLength={12}
-                    autoFocus
-                    required
-                  />
-                </Field>
-              </div>
-
-              <DemoNote>
-                No session is open yet. The code comes from your authenticator app, or from an unused recovery code.
-              </DemoNote>
-
-              <button type="submit" className="btn-primary btn-block" disabled={busy} style={{ marginTop: 12 }}>
-                {busy ? 'Verifying…' : 'Verify and sign in'}
-              </button>
-              {/*
-                No second back link at the foot. The one at the top of this stage
-                already goes back, and unlike this one it reaches the chooser as
-                well as the password step — so a second control here would be a
-                slower route to the same place.
-              */}
-          </form>
-        </div>
-      </AuthFrame>
-    )
+  const trackCaps = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    setCapsLock(event.getModifierState?.('CapsLock') ?? false)
   }
 
   return (
-    <AuthFrame statement={DOOR_HERO.statement} meta={DOOR_HERO.meta}>
-      <div className="auth-frame-work">
-        {/*
-          Always shown. The chooser is the origin of every path into this form, so
-          there is always something to go back to — including for someone who
-          arrived on a console bookmark, who otherwise has no explanation of what
-          the other door was.
-        */}
-        <button type="button" className="entry-back" onClick={() => { setStage('choose'); setError(null) }}>
-          <Icon name="arrow-left" />
-          All ways in
-        </button>
+    <div className="signin">
+      <OfficePanel elections={elections} />
 
-        <form className="auth-card" onSubmit={submitPassword}>
-            <div className="auth-card-head">
-              <div>
-                {/*
-                  No eyebrow here. The hero directly above already says
-                  "Administrator access", and with the card's box gone a second
-                  eyebrow a hundred pixels below read as a repetition rather than
-                  as a label. The second-factor step keeps its own, because
-                  "Step 2 of 2" tells the operator something the hero does not.
-                */}
-                <h2>{needsBootstrap ? 'Create the first administrator' : 'Sign in to manage elections'}</h2>
+      <main className="signin-main">
+        <div className="signin-topline">
+          <span className="signin-mobile-brand">
+            <Brand onNavigate={() => { window.location.hash = '#/' }} />
+          </span>
+          <a href="#/vote" className="signin-voter-link">
+            <span className="signin-voter-q">Here to vote? </span>
+            <span>Go to the voter portal</span>
+          </a>
+          <ThemeToggle />
+        </div>
+
+        <div className="signin-form-wrap">
+          {stage === 'mfa' ? (
+            <form className="signin-form" onSubmit={submitCode}>
+              <p className="signin-step">Step 2 of 2</p>
+              <h1>Enter your sign-in code</h1>
+              <p className="signin-lede">
+                Open your authenticator app and enter the six-digit code for <strong>{username}</strong>. You can also
+                use one of your recovery codes.
+              </p>
+
+              {error && <Alert tone="error">{error}</Alert>}
+
+              <div className="form-group">
+                <label htmlFor="admin-code">Code</label>
+                <input
+                  id="admin-code"
+                  className="otp-field"
+                  value={code}
+                  onChange={(event) => setCode(event.target.value.replace(/\s/g, ''))}
+                  autoComplete="one-time-code"
+                  inputMode="numeric"
+                  maxLength={12}
+                  placeholder="000000"
+                  autoFocus
+                  required
+                />
               </div>
-            </div>
-            <p className="card-subtitle">
-              {needsBootstrap
-                ? 'This server has no administrator accounts yet. The account you create now will own every election on it.'
-                : 'Use the username and password you were given by your Super Admin.'}
-            </p>
 
-            {error && (
-              <div style={{ marginTop: 16 }}>
-                <Alert tone="error">{error}</Alert>
-              </div>
-            )}
+              <button type="submit" className="btn-primary btn-block btn-lg" disabled={busy || code.length < 6}>
+                {busy ? 'Checking…' : 'Verify and sign in'}
+              </button>
 
-            {needsBootstrap && (
-              <div style={{ marginTop: 20 }}>
-                <Field label="Display name" htmlFor="admin-display">
+              <button
+                type="button"
+                className="signin-back"
+                onClick={() => {
+                  setStage('password')
+                  setCode('')
+                  setError(null)
+                }}
+              >
+                <Icon name="arrow-left" />
+                Use a different account
+              </button>
+            </form>
+          ) : (
+            <form className="signin-form" onSubmit={submitPassword}>
+              {needsBootstrap && <p className="signin-step">First-time setup</p>}
+              <h1>{needsBootstrap ? 'Create the first admin account' : 'Sign in'}</h1>
+              <p className="signin-lede">
+                {needsBootstrap
+                  ? 'This server has no admin accounts yet. The account you create now becomes the Super Admin and owns every election here.'
+                  : 'Manage elections, voter lists and results.'}
+              </p>
+
+              {error && <Alert tone="error">{error}</Alert>}
+
+              {needsBootstrap && (
+                <div className="form-group">
+                  <label htmlFor="admin-display">Your name</label>
                   <input
                     id="admin-display"
                     value={displayName}
                     onChange={(event) => setDisplayName(event.target.value)}
-                    placeholder="Chief Returning Officer"
+                    placeholder="Jordan Chen"
                     autoComplete="name"
+                    autoFocus
                   />
-                </Field>
-              </div>
-            )}
+                </div>
+              )}
 
-            <div style={{ marginTop: needsBootstrap ? 0 : 20 }}>
-              <Field
-                label="Username"
-                htmlFor="admin-username"
-                hint={needsBootstrap ? '3–40 characters: letters, numbers, dots, hyphens or underscores.' : undefined}
-              >
+              <div className="form-group">
+                <label htmlFor="admin-username">Username</label>
                 <input
                   id="admin-username"
                   value={username}
                   onChange={(event) => setUsername(event.target.value)}
-                  placeholder="j.chen"
                   autoComplete="username"
                   autoCapitalize="none"
                   spellCheck={false}
+                  autoFocus={!needsBootstrap}
                   required
                   minLength={3}
                 />
-              </Field>
-            </div>
-
-            <Field
-              label="Password"
-              htmlFor="admin-password"
-              hint={
-                needsBootstrap
-                  ? 'At least 12 characters, using three of: lower case, upper case, digits, symbols. Stored as a salted scrypt hash.'
-                  : undefined
-              }
-            >
-              <input
-                id="admin-password"
-                type="password"
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-                placeholder={needsBootstrap ? undefined : 'Enter your password'}
-                autoComplete={needsBootstrap ? 'new-password' : 'current-password'}
-                required
-                minLength={needsBootstrap ? 12 : 1}
-              />
-            </Field>
-
-            {/*
-              The role is not chosen here. The first account is always the super
-              administrator because it owns a server with no other accounts, and
-              every later account is granted its role by whoever created it. A
-              control that could not change the outcome would be a promise the
-              server does not keep, so the screen states the role instead.
-            */}
-            {needsBootstrap && (
-            <div className="role-readout">
-              <span className="eyebrow">Sign in as</span>
-              <span className="role-readout-value">
-                <Icon name="user" />
-                {needsBootstrap ? 'Super Admin' : 'Your assigned role'}
-              </span>
-              <span className="role-readout-hint">
-                {needsBootstrap
-                  ? 'The first account on a server owns every election on it.'
-                  : 'Granted by whoever created the account. The request cannot raise it.'}
-              </span>
-            </div>
-            )}
-
-            <button type="submit" className="btn-primary btn-block btn-lg" disabled={busy}>
-              {busy
-                ? 'Working…'
-                : needsBootstrap
-                  ? 'Create account and sign in'
-                  : 'Sign in'}
-            </button>
-
-            <div style={{ marginTop: 18 }}>
-              <DemoNote>
-                {needsBootstrap ? (
-                  <>
-                    This account becomes a <strong>Super Admin</strong> and will own every election on this server.
-                  </>
-                ) : (
-                  <>
-                    Accounts are created by a Super Admin under <strong>Security &rarr; Accounts</strong>. If you have
-                    lost your password, they can reset it.
-                  </>
+                {needsBootstrap && (
+                  <p className="field-hint">3–40 characters: letters, numbers, dots, hyphens or underscores.</p>
                 )}
-              </DemoNote>
-            </div>
+              </div>
 
-            <div className="auth-card-foot">
-              <button type="button" className="link-secondary" onClick={() => setError('Password reset is handled by your local election officer.')}>
-                Forgot password?
+              <div className="form-group">
+                <div className="signin-label-row">
+                  <label htmlFor="admin-password">Password</label>
+                  {!needsBootstrap && (
+                    <button
+                      type="button"
+                      className="signin-help-toggle"
+                      aria-expanded={helpOpen}
+                      aria-controls="signin-help"
+                      onClick={() => setHelpOpen((open) => !open)}
+                    >
+                      Forgot password?
+                    </button>
+                  )}
+                </div>
+                <div className="signin-password">
+                  <input
+                    id="admin-password"
+                    ref={passwordRef}
+                    type={showPassword ? 'text' : 'password'}
+                    value={password}
+                    onChange={(event) => setPassword(event.target.value)}
+                    onKeyUp={trackCaps}
+                    onKeyDown={trackCaps}
+                    onBlur={() => setCapsLock(false)}
+                    autoComplete={needsBootstrap ? 'new-password' : 'current-password'}
+                    required
+                    minLength={needsBootstrap ? 12 : 1}
+                  />
+                  <button
+                    type="button"
+                    className="signin-reveal"
+                    onClick={() => setShowPassword((shown) => !shown)}
+                    aria-pressed={showPassword}
+                    aria-controls="admin-password"
+                  >
+                    {showPassword ? 'Hide' : 'Show'}
+                  </button>
+                </div>
+                {capsLock && <p className="field-hint signin-caps">Caps Lock is on.</p>}
+                {needsBootstrap && (
+                  <p className="field-hint">
+                    At least 12 characters, using three of: lower case, upper case, numbers, symbols.
+                  </p>
+                )}
+                {helpOpen && (
+                  <p className="signin-help" id="signin-help">
+                    Passwords are reset by a Super Admin under <strong>Security → Accounts</strong>. Ask them to reset
+                    yours, then sign in with the temporary password they give you.
+                  </p>
+                )}
+              </div>
+
+              {mfaKnown && (
+                <p className="signin-note">
+                  <Icon name="shield-check" />
+                  This account uses two-step sign-in. You&rsquo;ll be asked for a code next.
+                </p>
+              )}
+
+              <button type="submit" className="btn-primary btn-block btn-lg" disabled={busy}>
+                {busy ? 'Signing in…' : needsBootstrap ? 'Create account and sign in' : 'Sign in'}
               </button>
-            </div>
 
-            {mfaKnown && (
-              <p className="voter-info-note" style={{ marginTop: 16, textAlign: 'center' }}>
-                This account has a second factor, so you will be asked for a code after your password.
+              <p className="signin-foot">
+                {needsBootstrap
+                  ? 'You can add more admins and assign their roles once you’re signed in.'
+                  : 'Don’t have an account? A Super Admin can create one for you.'}
               </p>
-            )}
-        </form>
+            </form>
+          )}
+        </div>
+      </main>
+    </div>
+  )
+}
+
+/**
+ * The election office: the product, and what this server is running right now.
+ */
+function OfficePanel({ elections }: { elections: ElectionSummary[] }) {
+  const host = typeof window !== 'undefined' ? window.location.host : 'this server'
+  const { open, upcoming, closed } = useMemo(() => {
+    const listed = elections.filter((item) => item.effective_status !== 'archived')
+    return {
+      open: listed.filter((item) => item.effective_status === 'open' || item.effective_status === 'paused'),
+      upcoming: listed.filter((item) => item.effective_status === 'scheduled' || item.effective_status === 'draft'),
+      closed: listed.filter((item) => item.effective_status === 'closed' || item.effective_status === 'certified'),
+    }
+  }, [elections])
+
+  return (
+    <aside className="signin-side" aria-label="About this server">
+      <Brand onNavigate={() => { window.location.hash = '#/' }} />
+
+      <div className="signin-side-body">
+        <p className="signin-side-kicker">Admin console</p>
+        <h2 className="signin-side-title">The election office.</h2>
+        <p className="signin-side-lede">
+          Set up ballots, manage voter lists, open and close voting, and certify the count.
+        </p>
+
+        <div className="signin-board">
+          <p className="signin-board-title">On this server now</p>
+          <dl className="signin-counts">
+            <div>
+              <dt>Open</dt>
+              <dd>{open.length}</dd>
+            </div>
+            <div>
+              <dt>Coming up</dt>
+              <dd>{upcoming.length}</dd>
+            </div>
+            <div>
+              <dt>Closed</dt>
+              <dd>{closed.length}</dd>
+            </div>
+          </dl>
+          {open.length > 0 && (
+            <ul className="signin-live">
+              {open.slice(0, 3).map((item) => (
+                <li key={item.id}>
+                  <span className="signin-live-title">{item.title}</span>
+                  <StatusBadge status={item.status} effective={item.effective_status} />
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
       </div>
-    </AuthFrame>
+
+      <div className="signin-side-foot">
+        <p className="signin-side-secure">
+          <Icon name="lock" />
+          Sign-in details never leave {host}.
+        </p>
+        <nav className="signin-side-links" aria-label="Legal and policy">
+          <a href="#/legal">Legal notices</a>
+          <a href="#/terms">Terms</a>
+          <a href="#/privacy">Privacy</a>
+        </nav>
+      </div>
+    </aside>
   )
 }
