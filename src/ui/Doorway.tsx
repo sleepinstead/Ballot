@@ -6,16 +6,15 @@
  * both doors as plain buttons beside the headline, ahead of anything else, and
  * everything below them is for the visitor who wants to know what this is first.
  *
- * The hero's other half is a specimen ballot that can be marked. It is the
- * product's one device — the box you mark on a ballot — doing what it does everywhere else,
- * so a first-time visitor has already used the voting control before they reach
- * a real ballot.
+ * The hero's other half is a specimen ballot above a ballot box. A visitor can
+ * mark it and cast it, so they have been through the whole vote in miniature
+ * before they reach a real ballot.
  *
  * The administrator door is a link to `#/admin`, which is the sign-in page while
  * signed out.
  */
 
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { AuthFrame } from './Shell'
 import { Onboarding, WELCOME_STEPS, replayOnboarding } from './Onboarding'
 
@@ -89,52 +88,134 @@ export function Doorway() {
   )
 }
 
-const SPECIMEN = ['Amara Rivera', 'Malik Okafor', 'Johanna Lindqvist']
+const SPECIMEN = [
+  { name: 'Amara Rivera', group: 'Engineering' },
+  { name: 'Malik Okafor', group: 'Law' },
+  { name: 'Johanna Lindqvist', group: 'Medicine' },
+]
+
+/** How many ballots the demonstration box already holds. */
+const BOX_START = 1283
+
+type SpecimenStage = 'mark' | 'casting' | 'cast'
+
+/** A receipt-shaped code that changes with each specimen ballot. */
+function specimenCode(serial: number): string {
+  const part = (n: number) => ((serial * n) % 65536).toString(16).toUpperCase().padStart(4, '0')
+  return `${part(40503)}-${part(7919)}-${part(52711)}`
+}
 
 /**
- * A ballot a visitor can mark.
+ * The whole vote in miniature: a paper ballot above a ballot box.
  *
- * Nothing is sent anywhere. Marking a box ticks it and tears off a sample
- * receipt, which is the whole voting experience in miniature.
+ * Marking a box ticks it. Casting folds the paper down through the slot, the
+ * box's count goes up by one, and a receipt rises out of the slot in the
+ * paper's place: proof the ballot was counted, with nothing about the choice
+ * on it. Nothing is sent anywhere. With reduced motion the same three states
+ * change instantly.
  */
 function SpecimenBallot() {
   const [marked, setMarked] = useState<number | null>(null)
+  const [stage, setStage] = useState<SpecimenStage>('mark')
+  const [count, setCount] = useState(BOX_START)
+  const [serial, setSerial] = useState(4217)
+  const timer = useRef<number | undefined>(undefined)
+
+  useEffect(() => () => window.clearTimeout(timer.current), [])
+
+  const cast = () => {
+    if (marked === null || stage !== 'mark') return
+    const still = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+    setStage('casting')
+    timer.current = window.setTimeout(() => {
+      setStage('cast')
+      setCount((current) => current + 1)
+    }, still ? 0 : 700)
+  }
+
+  const again = () => {
+    setMarked(null)
+    setSerial((current) => current + 1)
+    setStage('mark')
+  }
+
+  const code = specimenCode(serial)
 
   return (
-    <div className="specimen" role="group" aria-labelledby="specimen-title">
-      <div className="specimen-sheet">
-        <div className="specimen-head">
-          <span className="specimen-kicker">Specimen ballot</span>
-          <p className="specimen-title" id="specimen-title">Student council president</p>
-        </div>
-        <p className="specimen-instr">Mark one choice. Try it — nothing is recorded.</p>
-        <ul className="specimen-options">
-          {SPECIMEN.map((name, index) => (
-            <li key={name}>
+    <div className={`specimen specimen-${stage}`} role="group" aria-labelledby="specimen-title">
+      <div className="specimen-stage">
+        {stage !== 'cast' ? (
+          <div className="specimen-paper">
+            <div className="specimen-stub">
+              <span>Specimen ballot</span>
+              <span className="specimen-serial">No. {String(serial).padStart(6, '0')}</span>
+            </div>
+            <div className="specimen-head">
+              <p className="specimen-title" id="specimen-title">Student council president</p>
+              <p className="specimen-instr">Mark one box, then cast it. Nothing is recorded.</p>
+            </div>
+            <ul className="specimen-options">
+              {SPECIMEN.map((candidate, index) => (
+                <li key={candidate.name}>
+                  <button
+                    type="button"
+                    className={`specimen-option${marked === index ? ' is-marked' : ''}`}
+                    aria-pressed={marked === index}
+                    disabled={stage !== 'mark'}
+                    onClick={() => setMarked(marked === index ? null : index)}
+                  >
+                    <span className="specimen-tick" aria-hidden="true" />
+                    <span className="specimen-name">{candidate.name}</span>
+                    <span className="specimen-group">{candidate.group}</span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+            <div className="specimen-foot">
               <button
                 type="button"
-                className={`specimen-option${marked === index ? ' is-marked' : ''}`}
-                aria-pressed={marked === index}
-                onClick={() => setMarked(marked === index ? null : index)}
+                className="btn-primary btn-block"
+                disabled={marked === null || stage !== 'mark'}
+                onClick={cast}
               >
-                <span className="specimen-box" aria-hidden="true" />
-                {name}
+                {marked === null ? 'Mark a box to cast' : 'Cast this ballot'}
               </button>
-            </li>
-          ))}
-        </ul>
-      </div>
-      <div className={`specimen-stub${marked !== null ? ' is-shown' : ''}`} aria-live="polite">
-        {marked !== null ? (
-          <>
-            <span className="specimen-stub-label">Receipt code</span>
-            <span className="specimen-stub-code">7F3A-91C2-E04B</span>
-            <span className="specimen-stub-note">Proves the ballot was counted. Doesn&rsquo;t show the choice.</span>
-          </>
+            </div>
+          </div>
         ) : (
-          <span className="specimen-stub-note">Your receipt appears here once you mark a choice.</span>
+          <div className="specimen-receipt-wrap">
+            <div className="specimen-receipt">
+              <span className="specimen-receipt-label">Receipt code</span>
+              <span className="specimen-receipt-code">{code}</span>
+              <p className="specimen-receipt-note">
+                Your ballot is in the box. This code proves it was counted. It can&rsquo;t show who you chose.
+              </p>
+              <button type="button" className="btn-outline btn-block" onClick={again}>
+                Mark another ballot
+              </button>
+            </div>
+          </div>
         )}
       </div>
+
+      <div className="specimen-ballot-box" aria-hidden="true">
+        <div className="specimen-lid">
+          <span className="specimen-slot" />
+        </div>
+        <div className="specimen-crate">
+          <span className="specimen-crate-label">Ballot box</span>
+          <span className="specimen-count-wrap">
+            <span className={`specimen-count${stage === 'cast' ? ' is-bumped' : ''}`} key={count}>
+              {count.toLocaleString('en-US')}
+            </span>
+            <span className="specimen-crate-sub">ballots cast</span>
+          </span>
+        </div>
+      </div>
+
+      <p className="sr-only" aria-live="polite">
+        {stage === 'cast' ? `Ballot cast. The box now holds ${count.toLocaleString('en-US')} ballots. Receipt code ${code}.` : ''}
+      </p>
     </div>
   )
 }

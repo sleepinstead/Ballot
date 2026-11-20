@@ -14,8 +14,8 @@
  *     completed mark: primary buttons, ticked boxes, finished steps.
  *   · Status has real colour, always paired with a word: open is green,
  *     scheduled amber, paused orange, closed grey, certified violet.
- *   · Buttons and fields are square-cut, and only the main action on a screen
- *     has depth; sheets have a 4px corner and a hairline, not a floating shadow.
+ *   · Buttons and fields are square-cut. Main buttons are raised keys that sink
+ *     when pressed; sheets have a 4px corner and a hairline, not a shadow.
  *   · Light is the default; dark follows the system or an explicit choice.
  *
  * Older token names (--green, --amber, --red, --navy…) are kept as aliases so
@@ -50,6 +50,8 @@
   --band: #16132a;
   --band-ink: #f4f2fb;
   --band-muted: #aaa6c2;
+  /* The side face under a white key button. */
+  --key-side: var(--ink-base);
 
   /* Status */
   --open: #0b7a4b;
@@ -201,6 +203,7 @@
     --band: #2a2640;
     --band-ink: #f4f2fb;
     --band-muted: #b2aecb;
+    --key-side: #3d3856;
     --open: #5cc796;
     --open-soft: rgb(92 199 150 / 0.12);
     --open-line: rgb(92 199 150 / 0.32);
@@ -246,6 +249,7 @@
   --band: #2a2640;
   --band-ink: #f4f2fb;
   --band-muted: #b2aecb;
+  --key-side: #3d3856;
   --open: #5cc796;
   --open-soft: rgb(92 199 150 / 0.12);
   --open-line: rgb(92 199 150 / 0.32);
@@ -1569,17 +1573,21 @@ p { text-wrap: pretty; }
    ======================================== */
 
 /*
- * Square-cut. Only the main action on a screen is dimensional: a primary
- * button carries a darker edge along its bottom and a faint highlight across
- * its top, drawn inside its own box, so it never shifts the layout, never
- * spills out of a scrolling container, and never moves on hover. Pressing
- * settles it by a pixel. Everything else is flat.
+ * Square-cut keys. The main buttons stand on a solid base — a darker shade of
+ * their own face — and pressing one sinks it all the way down onto that base.
  *
- *   · Primary — election ink, with depth. One per view.
- *   · Inline primary — the same ink, flat, for dense admin rows and toolbars.
- *   · Secondary — white with a hairline.
- *   · Quiet — text on nothing.
- *   · Destructive — tinted red; filled red only on the final confirmation.
+ * The depth is drawn with box-shadow, which never takes up layout space, so a
+ * key lines up with the inputs beside it. Hover only changes the face colour;
+ * it never moves the key, so a cursor resting on an edge cannot make it
+ * flicker. An invisible ::after extends the hit area over the base, so a press
+ * that starts near the top edge still lands on the button after it sinks.
+ *
+ * Dense places — tables, toolbars, menus, the top bar — use the same buttons
+ * flat, because a row of raised keys in a table reads as noise.
+ *
+ *   · Primary — election ink on a deep violet base. One per view.
+ *   · Secondary — a white key with an ink outline on an ink base.
+ *   · Inline, lifecycle, destructive, quiet and icon buttons — flat.
  */
 .btn,
 .btn-primary,
@@ -1594,6 +1602,7 @@ p { text-wrap: pretty; }
 .btn-navy,
 .btn-ghost,
 .btn-danger {
+  position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1604,7 +1613,7 @@ p { text-wrap: pretty; }
   border-radius: 0;
   font-family: inherit;
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 650;
   letter-spacing: -0.005em;
   line-height: 1;
   white-space: nowrap;
@@ -1617,9 +1626,94 @@ p { text-wrap: pretty; }
 :is(.btn, .btn-primary, .btn-solid, .btn-confirm, .btn-primary-inline, .btn-submit-ballot, .btn-lifecycle,
   .btn-outline, .btn-cancel, .btn-secondary, .btn-navy, .btn-ghost, .btn-danger):focus-visible {
   outline: 2px solid var(--mark);
-  outline-offset: 2px;
+  outline-offset: 3px;
   border-radius: 0;
 }
+
+/* ---- Keys: the raised, pressable buttons ---- */
+.btn-primary,
+.btn-solid,
+.btn-confirm,
+.btn-submit-ballot,
+.btn-outline,
+.btn-cancel,
+.btn-secondary {
+  --key-depth: 4px;
+  --key-face: var(--sheet);
+  --key-base: var(--key-side);
+  --key-rim: var(--ink);
+  background-color: var(--key-face);
+  background-image: linear-gradient(180deg, rgb(255 255 255 / 0.16), rgb(255 255 255 / 0) 55%);
+  border-color: var(--key-rim);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.22),
+    0 var(--key-depth) 0 var(--key-base),
+    0 calc(var(--key-depth) + 4px) 10px -4px rgb(0 0 0 / 0.32);
+  transform: translateY(0);
+  transition:
+    background-color 120ms ease,
+    border-color 120ms ease,
+    color 120ms ease,
+    transform 70ms cubic-bezier(0.3, 0, 0.5, 1),
+    box-shadow 70ms cubic-bezier(0.3, 0, 0.5, 1);
+}
+:is(.btn-primary, .btn-solid, .btn-confirm, .btn-submit-ballot, .btn-outline, .btn-cancel, .btn-secondary)::after {
+  content: '';
+  position: absolute;
+  left: -1px;
+  right: -1px;
+  top: calc(-1px - var(--key-depth));
+  bottom: calc(-1px - var(--key-depth));
+}
+:is(.btn-primary, .btn-solid, .btn-confirm, .btn-submit-ballot, .btn-outline, .btn-cancel, .btn-secondary):active:not(:disabled) {
+  transform: translateY(var(--key-depth));
+  background-image: none;
+  box-shadow:
+    inset 0 2px 4px rgb(0 0 0 / 0.22),
+    0 0 0 var(--key-base),
+    0 1px 2px rgb(0 0 0 / 0.18);
+  transition-duration: 40ms;
+}
+
+/* Primary: election ink on a deep violet base. */
+.btn-primary,
+.btn-solid,
+.btn-confirm,
+.btn-submit-ballot {
+  --key-face: var(--mark);
+  --key-base: color-mix(in srgb, var(--mark) 55%, #000);
+  --key-rim: color-mix(in srgb, var(--mark) 70%, #000);
+  color: var(--mark-ink);
+}
+:is(.btn-primary, .btn-solid, .btn-confirm, .btn-submit-ballot):hover:not(:disabled) { --key-face: var(--mark-hover); }
+
+/* Secondary: a white key, ink outline, ink base. */
+.btn-outline,
+.btn-cancel,
+.btn-secondary {
+  background-image: none;
+  color: var(--ink);
+}
+:is(.btn-outline, .btn-cancel, .btn-secondary):hover:not(:disabled) { --key-face: var(--card-soft); }
+
+/* The final, destructive confirmation: a red key. */
+.btn-confirm.btn-confirm-danger,
+.btn-confirm-danger {
+  --key-face: var(--stop);
+  --key-base: color-mix(in srgb, var(--stop) 55%, #000);
+  --key-rim: color-mix(in srgb, var(--stop) 70%, #000);
+  color: #fff;
+}
+.btn-confirm.btn-confirm-danger:hover:not(:disabled),
+.btn-confirm-danger:hover:not(:disabled) { --key-face: color-mix(in srgb, var(--stop) 90%, #fff); }
+
+/* Bigger keys stand taller. */
+.btn-lg,
+.btn-primary.btn-lg,
+.btn-outline.btn-lg,
+.btn-submit-ballot { --key-depth: 5px; height: 48px; padding: 0 22px; font-size: 15px; }
+
+/* A disabled key is pressed flat and cannot rise. */
 :is(.btn, .btn-primary, .btn-solid, .btn-confirm, .btn-primary-inline, .btn-submit-ballot, .btn-lifecycle,
   .btn-outline, .btn-cancel, .btn-secondary, .btn-navy, .btn-ghost, .btn-danger):disabled {
   cursor: not-allowed;
@@ -1628,30 +1722,11 @@ p { text-wrap: pretty; }
   border-color: var(--border);
   color: var(--muted-2);
   box-shadow: none;
+  transform: none;
 }
+:is(.btn-primary, .btn-solid, .btn-confirm, .btn-submit-ballot, .btn-outline, .btn-cancel, .btn-secondary):disabled::after { display: none; }
 
-/* Primary, with depth: the edge and highlight live inside the box. */
-.btn-primary,
-.btn-solid,
-.btn-confirm,
-.btn-submit-ballot {
-  --btn-edge: color-mix(in srgb, var(--mark) 60%, #000);
-  background-color: var(--mark);
-  background-image: linear-gradient(180deg, rgb(255 255 255 / 0.14), rgb(255 255 255 / 0) 60%);
-  border-color: var(--btn-edge);
-  color: var(--mark-ink);
-  box-shadow:
-    inset 0 -3px 0 var(--btn-edge),
-    inset 0 1px 0 rgb(255 255 255 / 0.2),
-    0 1px 2px rgb(0 0 0 / 0.12);
-}
-:is(.btn-primary, .btn-solid, .btn-confirm, .btn-submit-ballot):hover:not(:disabled) { background-color: var(--mark-hover); }
-:is(.btn-primary, .btn-solid, .btn-confirm, .btn-submit-ballot):active:not(:disabled) {
-  background-image: none;
-  box-shadow: inset 0 2px 3px rgb(0 0 0 / 0.25);
-}
-
-/* Inline primary: the same ink, flat, for dense rows. */
+/* ---- Flat buttons ---- */
 .btn-primary-inline,
 .btn-lifecycle,
 .btn-lifecycle-publish,
@@ -1664,11 +1739,6 @@ p { text-wrap: pretty; }
   background: var(--mark-hover);
   border-color: var(--mark-hover);
 }
-
-/* Secondary: white with a hairline. */
-.btn-outline,
-.btn-cancel,
-.btn-secondary,
 .btn-navy,
 .btn-lifecycle-close,
 .btn-lifecycle-archive,
@@ -1677,39 +1747,18 @@ p { text-wrap: pretty; }
   border-color: var(--border-strong);
   color: var(--ink);
 }
-:is(.btn-outline, .btn-cancel, .btn-secondary, .btn-navy, .btn-lifecycle-close, .btn-lifecycle-archive,
-  .btn-lifecycle-unpublish):hover:not(:disabled) {
+:is(.btn-navy, .btn-lifecycle-close, .btn-lifecycle-archive, .btn-lifecycle-unpublish):hover:not(:disabled) {
   background: var(--card-soft);
   border-color: var(--ink);
 }
-
-/* Quiet. */
 .btn-ghost { background: transparent; border-color: transparent; color: var(--ink-2); }
 .btn-ghost:hover:not(:disabled) { background: rgb(var(--overlay) / 0.06); color: var(--ink); }
-
-/* Destructive. */
-.btn-danger {
-  background: var(--stop-soft);
-  border-color: var(--stop-line);
-  color: var(--stop);
-}
+.btn-danger { background: var(--stop-soft); border-color: var(--stop-line); color: var(--stop); }
 .btn-danger:hover:not(:disabled) { border-color: var(--stop); }
-.btn-confirm-danger,
-.btn-confirm.btn-confirm-danger {
-  --btn-edge: color-mix(in srgb, var(--stop) 60%, #000);
-  background-color: var(--stop);
-  border-color: var(--btn-edge);
-  color: #fff;
-}
-.btn-confirm-danger:hover:not(:disabled),
-.btn-confirm.btn-confirm-danger:hover:not(:disabled) { background-color: color-mix(in srgb, var(--stop) 90%, #fff); }
-
-/* Suspending voting is a caution; certifying is final. */
 .btn-lifecycle-pause { background: var(--hold-soft); border-color: var(--hold-line); color: var(--hold); }
 .btn-lifecycle-pause:hover:not(:disabled) { background: var(--hold-soft); border-color: var(--hold); }
 .btn-lifecycle-certify { background: var(--ink); border-color: var(--ink); color: var(--bg); }
 .btn-lifecycle-certify:hover:not(:disabled) { background: var(--ink-2); border-color: var(--ink-2); }
-
 .btn-lifecycle-disabled,
 .btn-lifecycle-disabled:hover {
   background: var(--bg-sunken);
@@ -1727,14 +1776,28 @@ p { text-wrap: pretty; }
 }
 .btn-lifecycle-lock svg { width: 12px; height: 12px; }
 .btn-lifecycle-disabled .btn-lifecycle-lock { display: none; }
-.btn-lifecycle-elevated { position: relative; }
+
+/* Keys in dense places sit flat: tables, toolbars, menus, the top bar. */
+:is(.data-table, .table-toolbar, .table-pager, .row-actions, .inline-form, .bulk-bar, .menu-panel,
+  .control-topbar, .approval-queue-actions, .cmdk)
+  :is(.btn-primary, .btn-solid, .btn-confirm, .btn-submit-ballot, .btn-outline, .btn-cancel, .btn-secondary),
+:is(.data-table, .table-toolbar, .table-pager, .row-actions, .inline-form, .bulk-bar, .menu-panel,
+  .control-topbar, .approval-queue-actions, .cmdk)
+  :is(.btn-primary, .btn-solid, .btn-confirm, .btn-submit-ballot, .btn-outline, .btn-cancel, .btn-secondary):active:not(:disabled) {
+  --key-rim: var(--border-strong);
+  box-shadow: none;
+  transform: none;
+  background-image: none;
+}
+:is(.data-table, .table-toolbar, .table-pager, .row-actions, .inline-form, .bulk-bar, .menu-panel,
+  .control-topbar, .approval-queue-actions, .cmdk)
+  :is(.btn-primary, .btn-solid, .btn-confirm, .btn-submit-ballot)  { --key-rim: var(--mark); }
+:is(.data-table, .table-toolbar, .table-pager, .row-actions, .inline-form, .bulk-bar, .menu-panel,
+  .control-topbar, .approval-queue-actions, .cmdk)
+  :is(.btn-primary, .btn-solid, .btn-confirm, .btn-submit-ballot, .btn-outline, .btn-cancel, .btn-secondary)::after { display: none; }
 
 /* Sizes */
 .btn-block { width: 100%; }
-.btn-lg,
-.btn-primary.btn-lg,
-.btn-outline.btn-lg,
-.btn-submit-ballot { height: 48px; padding: 0 22px; font-size: 15px; }
 .btn-primary-inline,
 .btn-lifecycle,
 .btn-danger,
@@ -2385,14 +2448,25 @@ p { text-wrap: pretty; }
 .election-row:hover .election-row-action svg { transform: translateX(2px); }
 /* "Vote" is the one action on this page that matters most, so it is a button. */
 .election-row-open .election-row-action {
+  --key-base: color-mix(in srgb, var(--mark) 55%, #000);
   height: 36px;
   padding: 0 12px 0 16px;
-  background: var(--mark) linear-gradient(180deg, rgb(255 255 255 / 0.14), rgb(255 255 255 / 0) 60%);
-  border: 1px solid color-mix(in srgb, var(--mark) 60%, #000);
+  background: var(--mark) linear-gradient(180deg, rgb(255 255 255 / 0.16), rgb(255 255 255 / 0) 55%);
+  border: 1px solid color-mix(in srgb, var(--mark) 70%, #000);
   color: var(--mark-ink);
-  box-shadow: inset 0 -3px 0 color-mix(in srgb, var(--mark) 60%, #000), inset 0 1px 0 rgb(255 255 255 / 0.2);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.22),
+    0 3px 0 var(--key-base),
+    0 7px 10px -4px rgb(0 0 0 / 0.3);
+  transition: background-color 120ms ease, transform 70ms cubic-bezier(0.3, 0, 0.5, 1), box-shadow 70ms cubic-bezier(0.3, 0, 0.5, 1);
 }
 .election-row-open:hover .election-row-action { background-color: var(--mark-hover); color: var(--mark-ink); }
+.election-row-open:active .election-row-action {
+  transform: translateY(3px);
+  background-image: none;
+  box-shadow: inset 0 2px 4px rgb(0 0 0 / 0.22), 0 0 0 var(--key-base);
+  transition-duration: 40ms;
+}
 
 /* ---- The frame inside an election ---- */
 .voter-frame-top {
@@ -2908,47 +2982,74 @@ p { text-wrap: pretty; }
 .door-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 34px; }
 .door-note { margin-top: 14px; font-size: 13.5px; color: var(--muted); }
 
-.specimen { width: 100%; max-width: 420px; justify-self: end; }
-.specimen-sheet {
-  background: var(--card);
-  border: 1px solid var(--border-strong);
-  border-radius: var(--r-xl);
-  box-shadow: var(--shadow-md);
-  overflow: hidden;
+/* ---- The specimen: a paper ballot above a ballot box ---- */
+.specimen { width: 100%; max-width: 410px; justify-self: end; position: relative; }
+
+/* The space above the box is fixed, so casting never makes the page jump. */
+.specimen-stage {
+  position: relative;
+  z-index: 1;
+  min-height: 392px;
+  display: flex;
+  align-items: flex-end;
+  padding: 0 14px;
 }
-.specimen-head { background: var(--band); color: var(--band-ink); padding: 16px 20px 18px; }
-.specimen-kicker { display: block; font-size: 12.5px; font-weight: 600; color: var(--band-muted); }
+
+.specimen-paper {
+  width: 100%;
+  background: var(--sheet);
+  border: 1px solid var(--border-strong);
+  border-bottom: 0;
+  box-shadow: 0 -2px 18px -8px rgb(var(--overlay) / 0.25);
+  transform-origin: 50% 100%;
+}
+.specimen-stub {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 9px 18px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+  border-bottom: 1.5px dashed var(--border-strong);
+  background: var(--bg-sunken);
+}
+.specimen-serial { font-variant-numeric: tabular-nums; letter-spacing: 0.04em; }
+.specimen-head { padding: 16px 18px 12px; border-bottom: 3px solid var(--ink); }
 .specimen-title {
   font-family: var(--font-display);
   font-stretch: var(--stretch-display);
   font-size: 20px;
   font-weight: 750;
   letter-spacing: -0.02em;
-  margin-top: 4px;
+  line-height: 1.1;
+  color: var(--ink);
 }
-.specimen-instr { padding: 11px 20px; font-size: 13.5px; color: var(--ink-2); background: var(--bg-sunken); border-bottom: 1px solid var(--border); }
+.specimen-instr { margin-top: 5px; font-size: 13px; color: var(--muted); }
 .specimen-options { list-style: none; }
 .specimen-options li + li { border-top: 1px solid var(--border-soft); }
 .specimen-option {
-  display: flex;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
   align-items: center;
-  gap: 14px;
+  gap: 13px;
   width: 100%;
-  padding: 15px 20px;
+  padding: 13px 18px;
   background: none;
   border: 0;
   font: inherit;
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--ink);
   text-align: left;
+  color: var(--ink);
   cursor: pointer;
   transition: background var(--ease);
 }
-.specimen-option:hover { background: var(--card-soft); }
-.specimen-option:focus-visible { outline: 2px solid var(--mark); outline-offset: -2px; border-radius: 0; }
+.specimen-option:hover:not(:disabled) { background: var(--card-soft); }
+.specimen-option:disabled { cursor: default; }
+.specimen-option:focus-visible { outline: 2px solid var(--mark); outline-offset: -2px; }
 .specimen-option.is-marked { background: var(--mark-soft); }
-.specimen-box {
+.specimen-name { font-size: 15.5px; font-weight: 650; }
+.specimen-group { font-size: 12.5px; color: var(--muted); }
+.specimen-tick {
   position: relative;
   width: 22px;
   height: 22px;
@@ -2956,7 +3057,7 @@ p { text-wrap: pretty; }
   flex: none;
   transition: border-color var(--ease), background var(--ease);
 }
-.specimen-box::after {
+.specimen-tick::after {
   content: '';
   position: absolute;
   left: 5px;
@@ -2969,35 +3070,98 @@ p { text-wrap: pretty; }
   opacity: 0;
   transition: transform 180ms cubic-bezier(0.3, 1.4, 0.5, 1), opacity 120ms ease;
 }
-.specimen-option:hover .specimen-box,
-.specimen-option.is-marked .specimen-box { border-color: var(--mark); background: var(--mark); }
-.specimen-option.is-marked .specimen-box::after { transform: rotate(45deg) scale(1); opacity: 1; }
+.specimen-option:hover:not(:disabled) .specimen-tick { border-color: var(--mark); }
+.specimen-option.is-marked .specimen-tick { border-color: var(--mark); background: var(--mark); }
+.specimen-option.is-marked .specimen-tick::after { transform: rotate(45deg) scale(1); opacity: 1; }
+.specimen-foot { padding: 12px 18px 22px; border-top: 1px solid var(--border-soft); }
 
-.specimen-stub {
-  position: relative;
-  margin: 14px 18px 0;
-  padding: 16px 18px;
-  min-height: 88px;
+/* Casting: the paper lifts, folds, and drops through the slot behind the lid. */
+.specimen-casting .specimen-paper { animation: specimen-fold 760ms cubic-bezier(0.5, 0, 0.75, 0); }
+@keyframes specimen-fold {
+  0% { transform: none; opacity: 1; }
+  28% { transform: translateY(-10px) scale(0.97, 0.94); opacity: 1; }
+  100% { transform: translateY(46px) scale(0.6, 0.02); opacity: 0.4; }
+}
+
+/* The receipt rises out of the slot, with a torn bottom edge. */
+.specimen-receipt-wrap {
+  width: 100%;
+  padding: 0 18px;
+  filter: drop-shadow(0 6px 10px rgb(var(--overlay) / 0.18));
+  transform-origin: 50% 100%;
+  animation: specimen-emerge 480ms cubic-bezier(0.2, 0.9, 0.3, 1.15);
+}
+@keyframes specimen-emerge {
+  from { transform: translateY(70%) scale(0.6, 0.2); opacity: 0; }
+  to { transform: none; opacity: 1; }
+}
+.specimen-receipt {
   display: flex;
   flex-direction: column;
-  justify-content: center;
-  gap: 2px;
-  border: 1.5px dashed var(--border-strong);
-  border-radius: var(--r-lg);
-  transition: background var(--ease), border-color var(--ease);
+  gap: 4px;
+  padding: 20px 20px 30px;
+  background: var(--sheet);
+  -webkit-mask: conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) 50% / 14px 100%;
+  mask: conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) 50% / 14px 100%;
 }
-.specimen-stub.is-shown { background: var(--card); border-style: solid; border-color: var(--border); box-shadow: var(--shadow-sm); }
-.specimen-stub-label { font-size: 12.5px; font-weight: 600; color: var(--muted); }
-.specimen-stub-code {
+.specimen-receipt-label { font-size: 12.5px; font-weight: 600; color: var(--muted); }
+.specimen-receipt-code {
   font-family: var(--font-display);
   font-stretch: var(--stretch-display);
-  font-size: 22px;
-  font-weight: 700;
-  letter-spacing: 0.06em;
+  font-size: clamp(19px, 5.4vw, 24px);
+  font-weight: 750;
+  letter-spacing: 0.05em;
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
   color: var(--ink);
 }
-.specimen-stub-note { font-size: 13px; color: var(--muted); line-height: 1.45; }
+.specimen-receipt-note { font-size: 13.5px; line-height: 1.5; color: var(--muted); margin: 6px 0 16px; }
+
+/* The ballot box: a lid with the slot, and a front face with the count. */
+.specimen-ballot-box { position: relative; z-index: 2; }
+.specimen-lid {
+  display: grid;
+  place-items: center;
+  height: 28px;
+  background: color-mix(in srgb, var(--band) 78%, #fff);
+  clip-path: polygon(3.5% 0, 96.5% 0, 100% 100%, 0 100%);
+  border-bottom: 1px solid rgb(0 0 0 / 0.25);
+}
+.specimen-slot {
+  width: 64%;
+  height: 7px;
+  background: #05040b;
+  box-shadow: inset 0 2px 3px rgb(0 0 0 / 0.7), 0 1px 0 rgb(255 255 255 / 0.18);
+}
+.specimen-crate {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px 20px 20px;
+  background:
+    linear-gradient(180deg, rgb(255 255 255 / 0.05), rgb(255 255 255 / 0) 40%),
+    var(--band);
+  color: var(--band-ink);
+  box-shadow: 0 18px 28px -16px rgb(0 0 0 / 0.5);
+}
+.specimen-crate-label { font-size: 13px; font-weight: 600; color: var(--band-muted); }
+.specimen-count-wrap { display: flex; flex-direction: column; align-items: flex-end; overflow: hidden; }
+.specimen-count {
+  font-family: var(--font-display);
+  font-stretch: var(--stretch-display);
+  font-size: 34px;
+  font-weight: 750;
+  letter-spacing: -0.03em;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.specimen-count.is-bumped { animation: specimen-tick 360ms cubic-bezier(0.2, 0.9, 0.3, 1.2); }
+@keyframes specimen-tick {
+  from { transform: translateY(100%); opacity: 0; }
+  to { transform: none; opacity: 1; }
+}
+.specimen-crate-sub { font-size: 12.5px; color: var(--band-muted); margin-top: 3px; }
 
 /* ---- Below the fold ---- */
 .door-section { padding: 48px 0 8px; border-top: 1px solid var(--border); }
@@ -3994,14 +4158,19 @@ th[aria-sort] .table-sort-mark svg { color: var(--mark); }
   .surface--back,
   .onboarding,
   .user-menu-panel,
-  .cmdk-overlay {
+  .cmdk-overlay,
+  .specimen-casting .specimen-paper,
+  .specimen-receipt-wrap,
+  .specimen-count.is-bumped {
     animation: none !important;
   }
   .candidate-row .radio-circle::after,
-  .specimen-box::after,
+  .specimen-tick::after,
   .brand,
   .election-row-action svg,
-  .back-link svg {
+  .back-link svg,
+  :is(.btn-primary, .btn-solid, .btn-confirm, .btn-submit-ballot, .btn-outline, .btn-cancel, .btn-secondary),
+  .election-row-action {
     transition: none !important;
   }
 }
