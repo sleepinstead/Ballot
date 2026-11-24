@@ -2971,59 +2971,86 @@ p { text-wrap: pretty; }
 .door-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 34px; }
 .door-note { margin-top: 14px; font-size: 13.5px; color: var(--muted); }
 
-/* ---- The specimen: a paper ballot above a ballot box ---- */
-.specimen { width: 100%; max-width: 410px; justify-self: end; position: relative; }
+/* ---- The specimen: a paper ballot above a clear ballot box ---- */
+.specimen { width: 100%; max-width: 400px; justify-self: end; position: relative; }
+
+/*
+ * Paper is paper: the ballot and the receipt stay white in both themes, so
+ * they carry their own light tokens.
+ */
+.specimen-paper,
+.specimen-receipt {
+  --overlay: 22 19 42;
+  --sheet: #ffffff;
+  --ink: #16132a;
+  --ink-2: #3a374e;
+  --muted: #5f5c71;
+  --muted-2: #6c697e;
+  --bg-sunken: #f4f4f7;
+  --card-soft: #f7f7fa;
+  --border: rgb(22 19 42 / 0.12);
+  --border-soft: rgb(22 19 42 / 0.07);
+  --border-strong: rgb(22 19 42 / 0.22);
+  --mark: #4b27d1;
+  --mark-hover: #3d1db8;
+  --mark-ink: #ffffff;
+  --mark-text: #4322c4;
+  --mark-soft: #efebfd;
+  --key-side: #16132a;
+  color: var(--ink);
+}
 
 /* The space above the box is fixed, so casting never makes the page jump. */
 .specimen-stage {
   position: relative;
   z-index: 1;
-  min-height: 392px;
+  min-height: 384px;
   display: flex;
   align-items: flex-end;
-  padding: 0 14px;
+  padding: 0 22px 14px;
 }
 
 .specimen-paper {
   width: 100%;
-  background: var(--sheet);
-  border: 1px solid var(--border-strong);
-  border-bottom: 0;
-  box-shadow: 0 -2px 18px -8px rgb(var(--overlay) / 0.25);
+  background:
+    linear-gradient(180deg, rgb(255 255 255 / 0), rgb(22 19 42 / 0.025)),
+    #fff;
+  box-shadow:
+    0 0 0 1px rgb(22 19 42 / 0.1),
+    0 2px 3px rgb(0 0 0 / 0.06),
+    0 18px 30px -14px rgb(0 0 0 / 0.35);
   transform-origin: 50% 100%;
 }
 .specimen-stub {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 9px 18px 10px;
-  font-size: 12px;
+  padding: 8px 16px 9px;
+  font-size: 11.5px;
   font-weight: 600;
   color: var(--muted);
-  border-bottom: 1.5px dashed var(--border-strong);
-  background: var(--bg-sunken);
+  border-bottom: 1.5px dashed rgb(22 19 42 / 0.22);
 }
-.specimen-serial { font-variant-numeric: tabular-nums; letter-spacing: 0.04em; }
-.specimen-head { padding: 16px 18px 12px; border-bottom: 3px solid var(--ink); }
+.specimen-serial { font-variant-numeric: tabular-nums; letter-spacing: 0.06em; }
+.specimen-head { padding: 14px 16px 11px; border-bottom: 2px solid var(--ink); }
 .specimen-title {
   font-family: var(--font-display);
   font-stretch: var(--stretch-display);
-  font-size: 20px;
+  font-size: 19px;
   font-weight: 750;
   letter-spacing: -0.02em;
   line-height: 1.1;
-  color: var(--ink);
 }
-.specimen-instr { margin-top: 5px; font-size: 13px; color: var(--muted); }
+.specimen-instr { margin-top: 4px; font-size: 12.5px; color: var(--muted); }
 .specimen-options { list-style: none; }
 .specimen-options li + li { border-top: 1px solid var(--border-soft); }
 .specimen-option {
   display: grid;
   grid-template-columns: auto 1fr auto;
   align-items: center;
-  gap: 13px;
+  gap: 12px;
   width: 100%;
-  padding: 13px 18px;
+  padding: 11px 16px;
   background: none;
   border: 0;
   font: inherit;
@@ -3036,13 +3063,14 @@ p { text-wrap: pretty; }
 .specimen-option:disabled { cursor: default; }
 .specimen-option:focus-visible { outline: 2px solid var(--mark); outline-offset: -2px; }
 .specimen-option.is-marked { background: var(--mark-soft); }
-.specimen-name { font-size: 15.5px; font-weight: 650; }
-.specimen-group { font-size: 12.5px; color: var(--muted); }
+.specimen-name { font-size: 15px; font-weight: 650; }
+.specimen-group { font-size: 12px; color: var(--muted); }
 .specimen-tick {
   position: relative;
-  width: 22px;
-  height: 22px;
-  border: 2px solid var(--ink-2);
+  width: 20px;
+  height: 20px;
+  border: 1.5px solid var(--ink-2);
+  background: #fff;
   flex: none;
   transition: border-color var(--ease), background var(--ease);
 }
@@ -3053,7 +3081,7 @@ p { text-wrap: pretty; }
   top: 1px;
   width: 6px;
   height: 11px;
-  border: solid var(--mark-ink);
+  border: solid #fff;
   border-width: 0 2.5px 2.5px 0;
   transform: rotate(45deg) scale(0.4);
   opacity: 0;
@@ -3062,95 +3090,174 @@ p { text-wrap: pretty; }
 .specimen-option:hover:not(:disabled) .specimen-tick { border-color: var(--mark); }
 .specimen-option.is-marked .specimen-tick { border-color: var(--mark); background: var(--mark); }
 .specimen-option.is-marked .specimen-tick::after { transform: rotate(45deg) scale(1); opacity: 1; }
-.specimen-foot { padding: 12px 18px 22px; border-top: 1px solid var(--border-soft); }
+.specimen-foot { padding: 12px 16px 18px; border-top: 1px solid var(--border-soft); }
 
-/* Casting: the paper lifts, folds, and drops through the slot behind the lid. */
-.specimen-casting .specimen-paper { animation: specimen-fold 760ms cubic-bezier(0.5, 0, 0.75, 0); }
+/*
+ * Casting: the sheet folds in half, narrows to the width of the slot and slides
+ * down through it. The lid sits above the stage, so the paper disappears into
+ * the slot rather than over the box. The animation outlasts the 700ms timer, so
+ * the paper is removed before it ends and never snaps back.
+ */
+.specimen-casting .specimen-paper { animation: specimen-fold 760ms cubic-bezier(0.45, 0, 0.6, 1); }
 @keyframes specimen-fold {
-  0% { transform: none; opacity: 1; }
-  28% { transform: translateY(-10px) scale(0.97, 0.94); opacity: 1; }
-  100% { transform: translateY(46px) scale(0.6, 0.02); opacity: 0.4; }
+  0% { transform: none; }
+  32% { transform: scale(1, 0.5); }
+  52% { transform: scale(0.56, 0.5); }
+  100% { transform: translateY(34px) scale(0.56, 0.02); }
 }
 
 /* The receipt rises out of the slot, with a torn bottom edge. */
 .specimen-receipt-wrap {
   width: 100%;
-  padding: 0 18px;
-  filter: drop-shadow(0 6px 10px rgb(var(--overlay) / 0.18));
+  padding: 0 14px;
+  filter: drop-shadow(0 10px 14px rgb(0 0 0 / 0.25));
   transform-origin: 50% 100%;
-  animation: specimen-emerge 480ms cubic-bezier(0.2, 0.9, 0.3, 1.15);
+  animation: specimen-emerge 520ms cubic-bezier(0.2, 0.9, 0.3, 1.1);
 }
 @keyframes specimen-emerge {
-  from { transform: translateY(70%) scale(0.6, 0.2); opacity: 0; }
-  to { transform: none; opacity: 1; }
+  from { transform: translateY(40px) scale(0.56, 0.1); }
+  to { transform: none; }
 }
 .specimen-receipt {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  padding: 20px 20px 30px;
-  background: var(--sheet);
-  -webkit-mask: conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) 50% / 14px 100%;
-  mask: conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) 50% / 14px 100%;
+  padding: 18px 18px 28px;
+  background: #fff;
+  -webkit-mask: conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) 50% / 12px 100%;
+  mask: conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) 50% / 12px 100%;
 }
-.specimen-receipt-label { font-size: 12.5px; font-weight: 600; color: var(--muted); }
+.specimen-receipt-label { font-size: 12px; font-weight: 600; color: var(--muted); }
 .specimen-receipt-code {
   font-family: var(--font-display);
   font-stretch: var(--stretch-display);
-  font-size: clamp(19px, 5.4vw, 24px);
+  font-size: clamp(18px, 5.2vw, 23px);
   font-weight: 750;
   letter-spacing: 0.05em;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
-  color: var(--ink);
 }
-.specimen-receipt-note { font-size: 13.5px; line-height: 1.5; color: var(--muted); margin: 6px 0 16px; }
+.specimen-receipt-note { font-size: 13px; line-height: 1.5; color: var(--muted); margin: 6px 0 14px; }
 
-/* The ballot box: a lid with the slot, and a front face with the count. */
+/*
+ * The box: a dark lid with a recessed slot, a clear acrylic body you can see
+ * the folded ballots through, a printed label, and a dark base rim.
+ */
 .specimen-ballot-box { position: relative; z-index: 2; }
 .specimen-lid {
+  position: relative;
   display: grid;
   place-items: center;
-  height: 28px;
-  background: color-mix(in srgb, var(--band) 78%, #fff);
-  clip-path: polygon(3.5% 0, 96.5% 0, 100% 100%, 0 100%);
-  border-bottom: 1px solid rgb(0 0 0 / 0.25);
+  height: 30px;
+  margin: 0 10px;
+  background: linear-gradient(180deg, #6a6388 0%, #3a3552 45%, #2b2740 100%);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.35);
+  clip-path: polygon(3% 0, 97% 0, 100% 100%, 0 100%);
+}
+.specimen-lid::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 4px;
+  background: #1b1829;
 }
 .specimen-slot {
-  width: 64%;
+  width: 58%;
   height: 7px;
-  background: #05040b;
-  box-shadow: inset 0 2px 3px rgb(0 0 0 / 0.7), 0 1px 0 rgb(255 255 255 / 0.18);
+  margin-bottom: 4px;
+  background: #050409;
+  border-radius: 1px;
+  box-shadow:
+    inset 0 2px 2px rgb(0 0 0 / 0.9),
+    0 1px 0 rgb(255 255 255 / 0.22);
 }
 .specimen-crate {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 16px;
-  padding: 18px 20px 20px;
+  position: relative;
+  height: 158px;
+  margin: 0 10px;
+  overflow: hidden;
   background:
-    linear-gradient(180deg, rgb(255 255 255 / 0.05), rgb(255 255 255 / 0) 40%),
-    var(--band);
-  color: var(--band-ink);
-  box-shadow: 0 18px 28px -16px rgb(0 0 0 / 0.5);
+    linear-gradient(115deg, rgb(255 255 255 / 0) 30%, rgb(255 255 255 / 0.55) 37%, rgb(255 255 255 / 0) 44%),
+    linear-gradient(180deg, rgb(225 228 238 / 0.55), rgb(205 209 224 / 0.75));
+  border-left: 1px solid rgb(22 19 42 / 0.18);
+  border-right: 1px solid rgb(22 19 42 / 0.18);
+  box-shadow:
+    inset 6px 0 10px -8px rgb(255 255 255 / 0.9),
+    inset -6px 0 10px -8px rgb(22 19 42 / 0.25);
 }
-.specimen-crate-label { font-size: 13px; font-weight: 600; color: var(--band-muted); }
-.specimen-count-wrap { display: flex; flex-direction: column; align-items: flex-end; overflow: hidden; }
+.specimen-pile { position: absolute; inset: 0; }
+.specimen-slip { position: absolute; width: 22%; height: 16px; }
+.specimen-slip > span {
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(180deg, #ffffff 0 48%, #e7e7ee 52% 100%);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.25);
+}
+.specimen-slip.is-new { animation: specimen-drop 520ms cubic-bezier(0.5, 0, 0.75, 0.35); }
+@keyframes specimen-drop {
+  from { transform: translateY(-150px); }
+  to { transform: none; }
+}
+.specimen-label {
+  position: absolute;
+  top: 16px;
+  left: 50%;
+  width: 62%;
+  translate: -50% 0;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: end;
+  gap: 2px 10px;
+  padding: 10px 12px 9px;
+  background: #fff;
+  color: #16132a;
+  box-shadow: 0 0 0 1px rgb(22 19 42 / 0.15), 0 1px 2px rgb(0 0 0 / 0.12);
+}
+.specimen-crate-label { grid-column: 1; font-size: 11.5px; font-weight: 700; color: #16132a; letter-spacing: 0.02em; }
+.specimen-count-wrap { grid-column: 2; grid-row: 1 / span 2; overflow: hidden; display: block; }
 .specimen-count {
+  display: block;
   font-family: var(--font-display);
   font-stretch: var(--stretch-display);
-  font-size: 34px;
+  font-size: 28px;
   font-weight: 750;
   letter-spacing: -0.03em;
   line-height: 1;
   font-variant-numeric: tabular-nums;
+  color: #16132a;
 }
-.specimen-count.is-bumped { animation: specimen-tick 360ms cubic-bezier(0.2, 0.9, 0.3, 1.2); }
+.specimen-count.is-bumped { animation: specimen-tick 380ms cubic-bezier(0.2, 0.9, 0.3, 1.2); }
 @keyframes specimen-tick {
-  from { transform: translateY(100%); opacity: 0; }
-  to { transform: none; opacity: 1; }
+  from { transform: translateY(100%); }
+  to { transform: none; }
 }
-.specimen-crate-sub { font-size: 12.5px; color: var(--band-muted); margin-top: 3px; }
+.specimen-crate-sub { grid-column: 1; font-size: 11.5px; color: #5f5c71; }
+.specimen-base {
+  height: 12px;
+  background: linear-gradient(180deg, #2b2740, #1b1829);
+  box-shadow: 0 16px 24px -12px rgb(0 0 0 / 0.5);
+}
+
+/* In the dark theme the acrylic picks up the room instead of the daylight. */
+:root[data-theme='dark'] .specimen-crate {
+  background:
+    linear-gradient(115deg, rgb(255 255 255 / 0) 30%, rgb(255 255 255 / 0.12) 37%, rgb(255 255 255 / 0) 44%),
+    linear-gradient(180deg, rgb(255 255 255 / 0.06), rgb(255 255 255 / 0.1));
+  border-color: rgb(255 255 255 / 0.16);
+  box-shadow: inset 6px 0 10px -8px rgb(255 255 255 / 0.3), inset -6px 0 10px -8px rgb(0 0 0 / 0.5);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) .specimen-crate {
+    background:
+      linear-gradient(115deg, rgb(255 255 255 / 0) 30%, rgb(255 255 255 / 0.12) 37%, rgb(255 255 255 / 0) 44%),
+      linear-gradient(180deg, rgb(255 255 255 / 0.06), rgb(255 255 255 / 0.1));
+    border-color: rgb(255 255 255 / 0.16);
+    box-shadow: inset 6px 0 10px -8px rgb(255 255 255 / 0.3), inset -6px 0 10px -8px rgb(0 0 0 / 0.5);
+  }
+}
 
 /* ---- Below the fold ---- */
 .door-section { padding: 48px 0 8px; border-top: 1px solid var(--border); }
@@ -4116,7 +4223,8 @@ th[aria-sort] .table-sort-mark svg { color: var(--mark); }
   .cmdk-overlay,
   .specimen-casting .specimen-paper,
   .specimen-receipt-wrap,
-  .specimen-count.is-bumped {
+  .specimen-count.is-bumped,
+  .specimen-slip.is-new {
     animation: none !important;
   }
   .candidate-row .radio-circle::after,

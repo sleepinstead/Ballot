@@ -97,6 +97,17 @@ const SPECIMEN = [
 /** How many ballots the demonstration box already holds. */
 const BOX_START = 1283
 
+/** Folded ballots already lying in the box, and where the next few land. */
+const PILE = [
+  { x: 4, y: 4, r: -6 }, { x: 19, y: 2, r: 4 }, { x: 33, y: 5, r: -2 }, { x: 47, y: 3, r: 7 },
+  { x: 61, y: 4, r: -5 }, { x: 75, y: 2, r: 3 }, { x: 11, y: 14, r: 9 }, { x: 26, y: 16, r: -8 },
+  { x: 54, y: 15, r: 5 }, { x: 68, y: 13, r: -3 },
+]
+const DROPS = [
+  { x: 40, y: 22, r: -7 }, { x: 18, y: 25, r: 6 }, { x: 62, y: 24, r: -4 }, { x: 30, y: 31, r: 3 },
+  { x: 50, y: 33, r: -9 }, { x: 72, y: 30, r: 8 },
+]
+
 type SpecimenStage = 'mark' | 'casting' | 'cast'
 
 /** A receipt-shaped code that changes with each specimen ballot. */
@@ -203,14 +214,33 @@ function SpecimenBallot() {
           <span className="specimen-slot" />
         </div>
         <div className="specimen-crate">
-          <span className="specimen-crate-label">Ballot box</span>
-          <span className="specimen-count-wrap">
-            <span className={`specimen-count${stage === 'cast' ? ' is-bumped' : ''}`} key={count}>
-              {count.toLocaleString('en-US')}
+          <div className="specimen-pile">
+            {PILE.map((slip, index) => (
+              <span key={index} className="specimen-slip" style={{ left: `${slip.x}%`, bottom: slip.y }}>
+                <span style={{ transform: `rotate(${slip.r}deg)` }} />
+              </span>
+            ))}
+            {DROPS.slice(0, Math.min(count - BOX_START, DROPS.length)).map((slip, index, cast) => (
+              <span
+                key={`drop-${index}`}
+                className={`specimen-slip${stage === 'cast' && index === cast.length - 1 ? ' is-new' : ''}`}
+                style={{ left: `${slip.x}%`, bottom: slip.y }}
+              >
+                <span style={{ transform: `rotate(${slip.r}deg)` }} />
+              </span>
+            ))}
+          </div>
+          <div className="specimen-label">
+            <span className="specimen-crate-label">Ballot box</span>
+            <span className="specimen-count-wrap">
+              <span className={`specimen-count${stage === 'cast' ? ' is-bumped' : ''}`} key={count}>
+                {count.toLocaleString('en-US')}
+              </span>
             </span>
             <span className="specimen-crate-sub">ballots cast</span>
-          </span>
+          </div>
         </div>
+        <div className="specimen-base" />
       </div>
 
       <p className="sr-only" aria-live="polite">
