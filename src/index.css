@@ -1831,39 +1831,6 @@ p { text-wrap: pretty; }
 .btn-icon-sm { width: 30px; height: 30px; }
 .btn-icon-sm svg { width: 15px; height: 15px; }
 
-/* The theme switch: a small raised key that sinks onto its base when pressed. */
-.btn-icon.theme-key {
-  --key-depth: 3px;
-  width: 34px;
-  height: 34px;
-  background: var(--sheet);
-  border-color: var(--ink);
-  color: var(--ink);
-  box-shadow:
-    inset 0 1px 0 rgb(255 255 255 / 0.22),
-    0 var(--key-depth) 0 var(--key-side),
-    0 calc(var(--key-depth) + 3px) 8px -3px rgb(0 0 0 / 0.3);
-  transform: translateY(0);
-  transition:
-    background-color 120ms ease,
-    transform 70ms cubic-bezier(0.3, 0, 0.5, 1),
-    box-shadow 70ms cubic-bezier(0.3, 0, 0.5, 1);
-}
-.btn-icon.theme-key svg { width: 17px; height: 17px; }
-.btn-icon.theme-key::after {
-  content: '';
-  position: absolute;
-  left: -1px;
-  right: -1px;
-  top: calc(-1px - var(--key-depth));
-  bottom: calc(-1px - var(--key-depth));
-}
-.btn-icon.theme-key:hover { background: var(--card-soft); border-color: var(--ink); color: var(--ink); }
-.btn-icon.theme-key:active {
-  transform: translateY(var(--key-depth));
-  box-shadow: inset 0 2px 4px rgb(0 0 0 / 0.22), 0 0 0 var(--key-side);
-  transition-duration: 40ms;
-}
 
 /* Text links that act like buttons. */
 .link-button {
@@ -4159,7 +4126,6 @@ th[aria-sort] .table-sort-mark svg { color: var(--mark); }
   .back-link svg,
   :is(.btn-primary, .btn-solid, .btn-confirm, .btn-submit-ballot, .btn-outline, .btn-cancel, .btn-secondary),
   .election-row-action,
-  .theme-key,
   .topbar-nav .topbar-link::after {
     transition: none !important;
   }

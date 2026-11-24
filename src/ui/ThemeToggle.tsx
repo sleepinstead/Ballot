@@ -85,7 +85,7 @@ export function ThemeToggle({ className }: { className?: string }) {
   return (
     <button
       type="button"
-      className={className ? `btn-icon theme-key ${className}` : 'btn-icon theme-key'}
+      className={className ? `btn-icon ${className}` : 'btn-icon'}
       onClick={advance}
       aria-label={label}
       title={label}
