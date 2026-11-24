@@ -4159,7 +4159,8 @@ th[aria-sort] .table-sort-mark svg { color: var(--mark); }
   .back-link svg,
   :is(.btn-primary, .btn-solid, .btn-confirm, .btn-submit-ballot, .btn-outline, .btn-cancel, .btn-secondary),
   .election-row-action,
-  .theme-key {
+  .theme-key,
+  .topbar-nav .topbar-link::after {
     transition: none !important;
   }
 }
@@ -4167,60 +4168,110 @@ th[aria-sort] .table-sort-mark svg { color: var(--mark); }
 /* ========================================
    Navigation bar — one bar on every page
    ======================================== */
-:root { --topbar-h: 60px; }
+
+/*
+ * Set like the header of a printed form: a thin rule of election ink across
+ * the very top, the wordmark, a hairline, then the two areas of the product.
+ * The area you are in is underlined in ink, flush with the bar's bottom edge;
+ * hovering another draws its underline in from the left. Page actions are
+ * quiet text; only Exit is boxed. Nothing else moves.
+ */
+:root { --topbar-h: 62px; }
 .topbar {
   position: sticky;
   top: 0;
   z-index: 40;
-  background: color-mix(in srgb, var(--sheet) 94%, transparent);
-  backdrop-filter: saturate(1.2) blur(10px);
+  background: var(--sheet);
+  border-top: 3px solid var(--mark);
   border-bottom: 1px solid var(--border);
 }
 .topbar-row {
   display: flex;
-  align-items: center;
-  gap: 6px;
+  align-items: stretch;
+  gap: 0;
   height: var(--topbar-h);
   max-width: calc(var(--page-max) + var(--page-gutter) * 2);
   margin: 0 auto;
   padding: 0 var(--page-gutter);
 }
-.topbar-row > .brand { margin-right: 14px; flex: none; }
-.topbar-nav { display: flex; align-items: center; gap: 2px; }
+.topbar-row > .brand {
+  align-self: center;
+  flex: none;
+  margin: 0;
+  padding: 4px 22px 4px 0;
+  border-right: 1px solid var(--border);
+  border-radius: 0;
+}
+.topbar-nav { display: flex; align-items: stretch; gap: 4px; padding-left: 14px; }
+.topbar-nav .topbar-link {
+  position: relative;
+  height: auto;
+  padding: 0 10px;
+  font-size: 14.5px;
+  color: var(--muted);
+}
+.topbar-nav .topbar-link::after {
+  content: '';
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  bottom: -1px;
+  height: 2px;
+  background: var(--ink);
+  transform: scaleX(0);
+  transform-origin: left center;
+  transition: transform 200ms cubic-bezier(0.2, 0, 0.2, 1);
+}
+.topbar-nav .topbar-link:hover { color: var(--ink); background: none; }
+.topbar-nav .topbar-link:hover::after { transform: scaleX(1); background: var(--border-strong); }
+.topbar-nav .topbar-link[aria-current='page'] { color: var(--ink); background: none; }
+.topbar-nav .topbar-link[aria-current='page']::after { transform: scaleX(1); background: var(--ink); height: 3px; }
+.topbar-nav .topbar-link:focus-visible { outline-offset: -6px; }
+
 .topbar-link {
   display: inline-flex;
   align-items: center;
   height: 34px;
-  padding: 0 12px;
+  padding: 0 10px;
   background: none;
   border: 1px solid transparent;
   font: inherit;
   font-size: 14px;
   font-weight: 600;
-  color: var(--muted);
+  color: var(--ink-2);
   text-decoration: none;
   white-space: nowrap;
   cursor: pointer;
-  transition: color 120ms ease, background 120ms ease, border-color 120ms ease;
+  transition: color 120ms ease, border-color 120ms ease, background 120ms ease;
 }
-.topbar-link:hover { color: var(--ink); background: rgb(var(--overlay) / 0.05); }
-.topbar-link[aria-current='page'] { color: var(--mark-text); background: var(--mark-soft); }
-.topbar-link-outline { border-color: var(--border-strong); color: var(--ink); }
-.topbar-link-outline:hover { border-color: var(--ink); background: var(--card-soft); }
-.topbar-center { flex: 1; display: flex; justify-content: center; min-width: 0; }
-.topbar-actions { display: flex; align-items: center; gap: 6px; flex: none; }
+.topbar-actions .topbar-link:not(.topbar-link-outline) {
+  text-decoration: underline;
+  text-decoration-color: transparent;
+  text-underline-offset: 5px;
+  text-decoration-thickness: 1.5px;
+}
+.topbar-actions .topbar-link:not(.topbar-link-outline):hover { color: var(--ink); text-decoration-color: currentColor; }
+.topbar-link-outline { border-color: var(--ink); color: var(--ink); padding: 0 14px; }
+.topbar-link-outline:hover { background: var(--ink); color: var(--sheet); }
+.topbar-center { flex: 1; display: flex; align-items: center; justify-content: center; min-width: 0; padding: 0 20px; }
+.topbar-actions { display: flex; align-items: center; gap: 8px; flex: none; }
 .topbar-status {
   display: inline-flex;
   align-items: center;
   gap: 7px;
-  margin-right: 6px;
-  font-size: 13.5px;
-  font-weight: 550;
-  color: var(--muted);
+  height: 28px;
+  padding: 0 10px;
+  margin-right: 4px;
+  background: var(--open-soft);
+  border: 1px solid var(--open-line);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--open);
   white-space: nowrap;
 }
-.topbar-status svg { width: 15px; height: 15px; color: var(--open); }
+.topbar-status svg { width: 14px; height: 14px; color: var(--open); }
 .topbar .control-tabs { border-top: 1px solid var(--border-soft); }
+.topbar .control-search { background: var(--bg-sunken); }
 
 /* Sign-in sits under the bar. */
 .signin-page { min-height: 100vh; min-height: 100dvh; display: flex; flex-direction: column; }
@@ -4232,9 +4283,12 @@ th[aria-sort] .table-sort-mark svg { color: var(--mark); }
   .signin-side { top: auto; height: auto; }
 }
 @media (max-width: 720px) {
-  .topbar-row { gap: 2px; }
-  .topbar-row > .brand { margin-right: 6px; }
-  .topbar-link { padding: 0 9px; }
+  .topbar-row > .brand { padding-right: 12px; }
+  .topbar-nav { padding-left: 6px; gap: 0; }
+  .topbar-nav .topbar-link { padding: 0 8px; }
+  .topbar-nav .topbar-link::after { left: 8px; right: 8px; }
+  .topbar-actions { gap: 4px; }
+  .topbar-link { padding: 0 8px; }
   .topbar-status { display: none; }
   .control-search { flex: none; width: 36px; padding: 0; justify-content: center; margin: 0 0 0 auto; }
   .control-search-text, .control-search kbd { display: none; }
