@@ -4296,3 +4296,27 @@ th[aria-sort] .table-sort-mark svg { color: var(--mark); }
 @media (max-width: 400px) {
   .topbar .control-search { display: none; }
 }
+
+/* ========================================
+   Status badges — quiet: a coloured dot and the word
+   ======================================== */
+.status-badge {
+  height: auto;
+  padding: 0;
+  gap: 6px;
+  background: none !important;
+  border: 0 !important;
+  font-size: 13px;
+  font-weight: 550;
+  color: var(--ink-2) !important;
+}
+.status-badge .status-dot { width: 6px; height: 6px; box-shadow: none; }
+.status-draft .status-dot,
+.status-archived .status-dot { background: var(--muted-2); }
+.status-scheduled .status-dot { background: var(--soon); }
+.status-open .status-dot { background: var(--open); }
+.status-paused .status-dot { background: var(--hold); }
+.status-closed .status-dot { background: var(--idle); }
+.status-certified .status-dot { background: var(--mark); }
+.status-archived { color: var(--muted) !important; }
+.status-drift { border-left-color: var(--border-strong); color: var(--muted); }
