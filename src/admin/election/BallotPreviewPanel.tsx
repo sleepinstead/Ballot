@@ -111,20 +111,25 @@ export function BallotPreviewPanel({ electionId, serverOffsetMs }: { electionId:
         <div className="preview-voter-frame">
           {/* The voter's own frame, not a decoration: an administrator checking a
               ballot should see the card a voter will see, header and all. */}
-          <div className="site-bar preview-bar">
-            {/* The same inner row the real header uses, so this miniature cannot
-                drift from the layout it is a miniature of. */}
-            <div className="site-bar-inner">
-              {/* Text only, like the real header this miniature copies. A mark here
-                  would make the preview show a lockup the voter never sees. */}
+          <div className="topbar preview-bar">
+            {/* The same row the real navigation bar uses, so this miniature cannot
+                drift from the bar a voter sees. Display only: nothing here is a link. */}
+            <div className="topbar-row">
               <span className="brand">
                 <span className="brand-name">
                   Ballot<span className="brand-dot">.</span>
                 </span>
               </span>
-              <span className="site-bar-meta">
-                <Icon name="lock" />
-                Secure voter session
+              <span className="topbar-nav">
+                <span className="topbar-link" aria-current="page">Vote</span>
+                <span className="topbar-link">Admin</span>
+              </span>
+              <span className="topbar-center" />
+              <span className="topbar-actions">
+                <span className="topbar-status">
+                  <Icon name="lock" />
+                  Secure session
+                </span>
               </span>
             </div>
           </div>

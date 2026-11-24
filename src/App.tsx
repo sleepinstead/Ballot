@@ -31,7 +31,7 @@ import {
 import { AdminApp } from './admin/AdminApp'
 import { Doorway } from './ui/Doorway'
 import { VoterFlow } from './voter/VoterFlow'
-import { SiteBar, SiteFoot } from './ui/Shell'
+import { TopBar, SiteFoot } from './ui/Shell'
 import { LegalPage, isLegalPage, type LegalPageId } from './ui/LegalPages'
 import { Icon } from './ui/Icon'
 import { Onboarding, VOTER_STEPS, replayOnboarding } from './ui/Onboarding'
@@ -223,7 +223,7 @@ export default function App() {
   if (offline) {
     return (
       <div className="page-shell">
-        <SiteBar />
+        <TopBar />
         <div className="page-center">
           <div className="auth-card" style={{ textAlign: 'center' }}>
             <span className="icon-tile icon-tile-lg tile-red" style={{ margin: '0 auto 18px' }}>
@@ -321,20 +321,21 @@ export default function App() {
 
   return frame(
     <div className="app-shell">
-      <SiteBar
-        meta={
-          <span className="site-bar-meta">
-            <span className="site-bar-secure">
+      <TopBar
+        area="vote"
+        actions={
+          <>
+            <span className="topbar-status">
               <Icon name="lock" />
-              Secure voter session
+              Secure session
             </span>
-            <button type="button" className="site-bar-link" onClick={() => replayOnboarding('voter')}>
-              How voting works
+            <button type="button" className="topbar-link" onClick={() => replayOnboarding('voter')}>
+              Help
             </button>
-            <button type="button" className="site-bar-link site-bar-link-exit" onClick={() => void exitPortal()}>
+            <button type="button" className="topbar-link topbar-link-outline" onClick={() => void exitPortal()}>
               Exit
             </button>
-          </span>
+          </>
         }
       />
 

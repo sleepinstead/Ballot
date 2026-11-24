@@ -25,10 +25,9 @@ import type { ClientSession } from '../lib/adminTypes'
 import type { ElectionSummary } from '../lib/types'
 import { Alert, Spinner } from '../ui/primitives'
 import { Icon, initials, type IconName } from '../ui/Icon'
-import { Brand } from '../ui/Shell'
+import { TopBar } from '../ui/Shell'
 import { Onboarding, ADMIN_STEPS, replayOnboarding } from '../ui/Onboarding'
 import { CommandPalette, type Command } from './CommandPalette'
-import { ThemeToggle } from '../ui/ThemeToggle'
 import { ElevationProvider, useElevation } from './control/elevation'
 import { AdminLogin } from './AdminLogin'
 import { ElectionWorkspace } from './election/ElectionWorkspace'
@@ -292,73 +291,66 @@ function ControlCentre({
         Skip to content
       </a>
 
-      <header className="control-topbar">
-        <div className="control-topbar-row">
-          <Brand sub="Admin" onNavigate={() => { window.location.hash = '#/' }} />
-          <span className="control-workspace-chip" title={workspace.name}>
-            <span className="control-workspace-dot" aria-hidden="true" />
-            {workspace.name}
-          </span>
-
+      <TopBar
+        area="admin"
+        center={
           <button type="button" className="control-search" onClick={() => setPaletteOpen(true)} aria-label="Open command menu">
             <Icon name="search" />
             <span className="control-search-text">Search or jump to…</span>
             <kbd>{typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform) ? '⌘K' : 'Ctrl K'}</kbd>
           </button>
-
-          <div className="control-topbar-actions">
-            <ThemeToggle />
+        }
+        actions={
+          <button
+            type="button"
+            className="btn-icon"
+            aria-label={alerts.security > 0 ? `Alerts: ${alerts.security} need review` : 'Alerts'}
+            onClick={() => (alerts.security > 0 ? navigate('security') : navigate('audit'))}
+          >
+            <Icon name="bell" />
+            {alerts.security > 0 && <span className="control-alert-dot" aria-hidden="true" />}
+          </button>
+        }
+        account={
+          <div className="user-menu" ref={userMenuRef}>
             <button
               type="button"
-              className="btn-icon"
-              aria-label="Alerts"
-              onClick={() => (alerts.security > 0 ? navigate('security') : navigate('audit'))}
+              className="user-menu-trigger"
+              aria-haspopup="menu"
+              aria-expanded={userOpen}
+              aria-label="Account menu"
+              onClick={() => setUserOpen((open) => !open)}
             >
-              <Icon name="bell" />
-              {alerts.security > 0 && <span className="control-alert-dot" aria-hidden="true" />}
+              <span className="user-avatar" aria-hidden="true">{initials(session.admin.display_name)}</span>
             </button>
-            <button type="button" className="btn-outline control-portal-btn" onClick={() => { window.location.hash = '#/vote' }}>
-              <Icon name="vote" />
-              Voter portal
-            </button>
-            <div className="user-menu" ref={userMenuRef}>
-              <button
-                type="button"
-                className="user-menu-trigger"
-                aria-haspopup="menu"
-                aria-expanded={userOpen}
-                aria-label="Account menu"
-                onClick={() => setUserOpen((open) => !open)}
-              >
-                <span className="user-avatar" aria-hidden="true">{initials(session.admin.display_name)}</span>
-              </button>
-              {userOpen && (
-                <div className="user-menu-panel" role="menu">
-                  <div className="user-menu-head">
-                    <span className="user-menu-name">{session.admin.display_name}</span>
-                    <span className="user-menu-role">{ROLE_LABELS[role]}</span>
-                    <span className="user-menu-meta">
-                      <span className={`control-identity-dot${busy ? ' control-identity-busy' : ''}`} aria-hidden="true" />
-                      {session.admin.mfa_enabled ? '2FA on' : 'Password only'} · {formatCountdownSeconds(countdown)}
-                    </span>
-                  </div>
-                  {allowed.some((item) => item.id === 'settings') && (
-                    <button type="button" role="menuitem" className="user-menu-item" onClick={() => { setUserOpen(false); navigate('settings') }}>
-                      <Icon name="cog" /> Settings
-                    </button>
-                  )}
-                  <button type="button" role="menuitem" className="user-menu-item" onClick={() => { setUserOpen(false); replayOnboarding('admin') }}>
-                    <Icon name="sparkle" /> Take the tour
-                  </button>
-                  <button type="button" role="menuitem" className="user-menu-item" onClick={() => void signOut()}>
-                    <Icon name="logout" /> Sign out
-                  </button>
+            {userOpen && (
+              <div className="user-menu-panel" role="menu">
+                <div className="user-menu-head">
+                  <span className="user-menu-name">{session.admin.display_name}</span>
+                  <span className="user-menu-role">{ROLE_LABELS[role]}</span>
+                  <span className="user-menu-meta">
+                    <span className={`control-identity-dot${busy ? ' control-identity-busy' : ''}`} aria-hidden="true" />
+                    {session.admin.mfa_enabled ? 'Two-step sign-in on' : 'Password only'}, session ends in{' '}
+                    {formatCountdownSeconds(countdown)}
+                  </span>
+                  <span className="user-menu-meta">Server {workspace.name}</span>
                 </div>
-              )}
-            </div>
+                {allowed.some((item) => item.id === 'settings') && (
+                  <button type="button" role="menuitem" className="user-menu-item" onClick={() => { setUserOpen(false); navigate('settings') }}>
+                    <Icon name="cog" /> Settings
+                  </button>
+                )}
+                <button type="button" role="menuitem" className="user-menu-item" onClick={() => { setUserOpen(false); replayOnboarding('admin') }}>
+                  <Icon name="sparkle" /> Take the tour
+                </button>
+                <button type="button" role="menuitem" className="user-menu-item" onClick={() => void signOut()}>
+                  <Icon name="logout" /> Sign out
+                </button>
+              </div>
+            )}
           </div>
-        </div>
-
+        }
+      >
         <nav className="control-tabs" aria-label="Administration sections">
           <div className="control-tabs-inner">
             {primary.map(tab)}
@@ -367,7 +359,7 @@ function ControlCentre({
             {secondary.filter((item) => item.id === 'settings').map(tab)}
           </div>
         </nav>
-      </header>
+      </TopBar>
 
       {paletteOpen && <CommandPalette commands={commands} onClose={() => setPaletteOpen(false)} />}
       <Onboarding id="admin" steps={ADMIN_STEPS} />

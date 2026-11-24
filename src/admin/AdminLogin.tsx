@@ -13,9 +13,8 @@
  * The page is a split screen. The left half is the election office: what this
  * server is running right now, read from the same public list the voter portal
  * shows, so an officer sees the state of things before they sign in. The right
- * half is the form and nothing else. A voter who lands here by mistake gets a
- * direct link to the portal at the top of the form, which replaces the chooser
- * this route used to put in front of everyone.
+ * half is the form and nothing else. The shared navigation bar sits above both,
+ * so a voter who lands here by mistake is one click from Vote.
  */
 
 import { useEffect, useMemo, useRef, useState } from 'react'
@@ -23,8 +22,7 @@ import { authApi } from '../lib/api'
 import type { ClientSession } from '../lib/adminTypes'
 import type { ElectionSummary } from '../lib/types'
 import { Icon } from '../ui/Icon'
-import { Brand } from '../ui/Shell'
-import { ThemeToggle } from '../ui/ThemeToggle'
+import { TopBar } from '../ui/Shell'
 import { Alert, StatusBadge } from '../ui/primitives'
 
 type Stage = 'password' | 'mfa'
@@ -123,183 +121,175 @@ export function AdminLogin({
   }
 
   return (
-    <div className="signin">
-      <OfficePanel elections={elections} />
+    <div className="signin-page">
+      <TopBar area="admin" />
+      <div className="signin">
+        <OfficePanel elections={elections} />
 
-      <main className="signin-main">
-        <div className="signin-topline">
-          <span className="signin-mobile-brand">
-            <Brand onNavigate={() => { window.location.hash = '#/' }} />
-          </span>
-          <a href="#/vote" className="signin-voter-link">
-            <span className="signin-voter-q">Here to vote? </span>
-            <span>Go to the voter portal</span>
-          </a>
-          <ThemeToggle />
-        </div>
+        <main className="signin-main">
+          <div className="signin-form-wrap">
+            {stage === 'mfa' ? (
+              <form className="signin-form" onSubmit={submitCode}>
+                <p className="signin-step">Step 2 of 2</p>
+                <h1>Enter your sign-in code</h1>
+                <p className="signin-lede">
+                  Open your authenticator app and enter the six-digit code for <strong>{username}</strong>. You can also
+                  use one of your recovery codes.
+                </p>
 
-        <div className="signin-form-wrap">
-          {stage === 'mfa' ? (
-            <form className="signin-form" onSubmit={submitCode}>
-              <p className="signin-step">Step 2 of 2</p>
-              <h1>Enter your sign-in code</h1>
-              <p className="signin-lede">
-                Open your authenticator app and enter the six-digit code for <strong>{username}</strong>. You can also
-                use one of your recovery codes.
-              </p>
+                {error && <Alert tone="error">{error}</Alert>}
 
-              {error && <Alert tone="error">{error}</Alert>}
-
-              <div className="form-group">
-                <label htmlFor="admin-code">Code</label>
-                <input
-                  id="admin-code"
-                  className="otp-field"
-                  value={code}
-                  onChange={(event) => setCode(event.target.value.replace(/\s/g, ''))}
-                  autoComplete="one-time-code"
-                  inputMode="numeric"
-                  maxLength={12}
-                  placeholder="000000"
-                  autoFocus
-                  required
-                />
-              </div>
-
-              <button type="submit" className="btn-primary btn-block btn-lg" disabled={busy || code.length < 6}>
-                {busy ? 'Checking…' : 'Verify and sign in'}
-              </button>
-
-              <button
-                type="button"
-                className="signin-back"
-                onClick={() => {
-                  setStage('password')
-                  setCode('')
-                  setError(null)
-                }}
-              >
-                <Icon name="arrow-left" />
-                Use a different account
-              </button>
-            </form>
-          ) : (
-            <form className="signin-form" onSubmit={submitPassword}>
-              {needsBootstrap && <p className="signin-step">First-time setup</p>}
-              <h1>{needsBootstrap ? 'Create the first admin account' : 'Sign in'}</h1>
-              <p className="signin-lede">
-                {needsBootstrap
-                  ? 'This server has no admin accounts yet. The account you create now becomes the Super Admin and owns every election here.'
-                  : 'Manage elections, voter lists and results.'}
-              </p>
-
-              {error && <Alert tone="error">{error}</Alert>}
-
-              {needsBootstrap && (
                 <div className="form-group">
-                  <label htmlFor="admin-display">Your name</label>
+                  <label htmlFor="admin-code">Code</label>
                   <input
-                    id="admin-display"
-                    value={displayName}
-                    onChange={(event) => setDisplayName(event.target.value)}
-                    placeholder="Jordan Chen"
-                    autoComplete="name"
+                    id="admin-code"
+                    className="otp-field"
+                    value={code}
+                    onChange={(event) => setCode(event.target.value.replace(/\s/g, ''))}
+                    autoComplete="one-time-code"
+                    inputMode="numeric"
+                    maxLength={12}
+                    placeholder="000000"
                     autoFocus
+                    required
                   />
                 </div>
-              )}
 
-              <div className="form-group">
-                <label htmlFor="admin-username">Username</label>
-                <input
-                  id="admin-username"
-                  value={username}
-                  onChange={(event) => setUsername(event.target.value)}
-                  autoComplete="username"
-                  autoCapitalize="none"
-                  spellCheck={false}
-                  autoFocus={!needsBootstrap}
-                  required
-                  minLength={3}
-                />
+                <button type="submit" className="btn-primary btn-block btn-lg" disabled={busy || code.length < 6}>
+                  {busy ? 'Checking…' : 'Verify and sign in'}
+                </button>
+
+                <button
+                  type="button"
+                  className="signin-back"
+                  onClick={() => {
+                    setStage('password')
+                    setCode('')
+                    setError(null)
+                  }}
+                >
+                  <Icon name="arrow-left" />
+                  Use a different account
+                </button>
+              </form>
+            ) : (
+              <form className="signin-form" onSubmit={submitPassword}>
+                {needsBootstrap && <p className="signin-step">First-time setup</p>}
+                <h1>{needsBootstrap ? 'Create the first admin account' : 'Sign in'}</h1>
+                <p className="signin-lede">
+                  {needsBootstrap
+                    ? 'This server has no admin accounts yet. The account you create now becomes the Super Admin and owns every election here.'
+                    : 'Manage elections, voter lists and results.'}
+                </p>
+
+                {error && <Alert tone="error">{error}</Alert>}
+
                 {needsBootstrap && (
-                  <p className="field-hint">3–40 characters: letters, numbers, dots, hyphens or underscores.</p>
+                  <div className="form-group">
+                    <label htmlFor="admin-display">Your name</label>
+                    <input
+                      id="admin-display"
+                      value={displayName}
+                      onChange={(event) => setDisplayName(event.target.value)}
+                      placeholder="Jordan Chen"
+                      autoComplete="name"
+                      autoFocus
+                    />
+                  </div>
                 )}
-              </div>
 
-              <div className="form-group">
-                <div className="signin-label-row">
-                  <label htmlFor="admin-password">Password</label>
-                  {!needsBootstrap && (
-                    <button
-                      type="button"
-                      className="signin-help-toggle"
-                      aria-expanded={helpOpen}
-                      aria-controls="signin-help"
-                      onClick={() => setHelpOpen((open) => !open)}
-                    >
-                      Forgot password?
-                    </button>
+                <div className="form-group">
+                  <label htmlFor="admin-username">Username</label>
+                  <input
+                    id="admin-username"
+                    value={username}
+                    onChange={(event) => setUsername(event.target.value)}
+                    autoComplete="username"
+                    autoCapitalize="none"
+                    spellCheck={false}
+                    autoFocus={!needsBootstrap}
+                    required
+                    minLength={3}
+                  />
+                  {needsBootstrap && (
+                    <p className="field-hint">3–40 characters: letters, numbers, dots, hyphens or underscores.</p>
                   )}
                 </div>
-                <div className="signin-password">
-                  <input
-                    id="admin-password"
-                    ref={passwordRef}
-                    type={showPassword ? 'text' : 'password'}
-                    value={password}
-                    onChange={(event) => setPassword(event.target.value)}
-                    onKeyUp={trackCaps}
-                    onKeyDown={trackCaps}
-                    onBlur={() => setCapsLock(false)}
-                    autoComplete={needsBootstrap ? 'new-password' : 'current-password'}
-                    required
-                    minLength={needsBootstrap ? 12 : 1}
-                  />
-                  <button
-                    type="button"
-                    className="signin-reveal"
-                    onClick={() => setShowPassword((shown) => !shown)}
-                    aria-pressed={showPassword}
-                    aria-controls="admin-password"
-                  >
-                    {showPassword ? 'Hide' : 'Show'}
-                  </button>
+
+                <div className="form-group">
+                  <div className="signin-label-row">
+                    <label htmlFor="admin-password">Password</label>
+                    {!needsBootstrap && (
+                      <button
+                        type="button"
+                        className="signin-help-toggle"
+                        aria-expanded={helpOpen}
+                        aria-controls="signin-help"
+                        onClick={() => setHelpOpen((open) => !open)}
+                      >
+                        Forgot password?
+                      </button>
+                    )}
+                  </div>
+                  <div className="signin-password">
+                    <input
+                      id="admin-password"
+                      ref={passwordRef}
+                      type={showPassword ? 'text' : 'password'}
+                      value={password}
+                      onChange={(event) => setPassword(event.target.value)}
+                      onKeyUp={trackCaps}
+                      onKeyDown={trackCaps}
+                      onBlur={() => setCapsLock(false)}
+                      autoComplete={needsBootstrap ? 'new-password' : 'current-password'}
+                      required
+                      minLength={needsBootstrap ? 12 : 1}
+                    />
+                    <button
+                      type="button"
+                      className="signin-reveal"
+                      onClick={() => setShowPassword((shown) => !shown)}
+                      aria-pressed={showPassword}
+                      aria-controls="admin-password"
+                    >
+                      {showPassword ? 'Hide' : 'Show'}
+                    </button>
+                  </div>
+                  {capsLock && <p className="field-hint signin-caps">Caps Lock is on.</p>}
+                  {needsBootstrap && (
+                    <p className="field-hint">
+                      At least 12 characters, using three of: lower case, upper case, numbers, symbols.
+                    </p>
+                  )}
+                  {helpOpen && (
+                    <p className="signin-help" id="signin-help">
+                      Passwords are reset by a Super Admin under <strong>Security → Accounts</strong>. Ask them to reset
+                      yours, then sign in with the temporary password they give you.
+                    </p>
+                  )}
                 </div>
-                {capsLock && <p className="field-hint signin-caps">Caps Lock is on.</p>}
-                {needsBootstrap && (
-                  <p className="field-hint">
-                    At least 12 characters, using three of: lower case, upper case, numbers, symbols.
-                  </p>
-                )}
-                {helpOpen && (
-                  <p className="signin-help" id="signin-help">
-                    Passwords are reset by a Super Admin under <strong>Security → Accounts</strong>. Ask them to reset
-                    yours, then sign in with the temporary password they give you.
-                  </p>
-                )}
-              </div>
 
-              {mfaKnown && (
-                <p className="signin-note">
-                  <Icon name="shield-check" />
-                  This account uses two-step sign-in. You&rsquo;ll be asked for a code next.
+                {mfaKnown && (
+                  <p className="signin-note">
+                    <Icon name="shield-check" />
+                    This account uses two-step sign-in. You&rsquo;ll be asked for a code next.
+                  </p>
+                )}
+
+                <button type="submit" className="btn-primary btn-block btn-lg" disabled={busy}>
+                  {busy ? 'Signing in…' : needsBootstrap ? 'Create account and sign in' : 'Sign in'}
+                </button>
+
+                <p className="signin-foot">
+                  {needsBootstrap
+                    ? 'You can add more admins and assign their roles once you’re signed in.'
+                    : 'Don’t have an account? A Super Admin can create one for you.'}
                 </p>
-              )}
-
-              <button type="submit" className="btn-primary btn-block btn-lg" disabled={busy}>
-                {busy ? 'Signing in…' : needsBootstrap ? 'Create account and sign in' : 'Sign in'}
-              </button>
-
-              <p className="signin-foot">
-                {needsBootstrap
-                  ? 'You can add more admins and assign their roles once you’re signed in.'
-                  : 'Don’t have an account? A Super Admin can create one for you.'}
-              </p>
-            </form>
-          )}
-        </div>
-      </main>
+              </form>
+            )}
+          </div>
+        </main>
+      </div>
     </div>
   )
 }
@@ -320,8 +310,6 @@ function OfficePanel({ elections }: { elections: ElectionSummary[] }) {
 
   return (
     <aside className="signin-side" aria-label="About this server">
-      <Brand onNavigate={() => { window.location.hash = '#/' }} />
-
       <div className="signin-side-body">
         <p className="signin-side-kicker">Admin console</p>
         <h2 className="signin-side-title">The election office.</h2>

@@ -66,24 +66,55 @@ export function BackLink({ to, label }: { to: string; label: string }) {
   )
 }
 
-export function SiteBar({ meta, children }: { meta?: ReactNode; children?: ReactNode }) {
+/** Which top-level area a page belongs to, for the navigation's current marker. */
+export type TopBarArea = 'vote' | 'admin' | null
+
+/**
+ * The navigation bar. Every page uses this one, so the bar is the same height,
+ * the same measure and the same order everywhere:
+ *
+ *   wordmark · Vote / Admin · (page centre) · page actions · theme · (account)
+ *
+ * The two links are the product's two areas. The one you are in carries
+ * `aria-current` and an ink underline, the same marker the admin section tabs
+ * use. Page-specific things go in `center` (the admin search) and `actions`
+ * (help, exit, alerts). The theme key is always the last control before the
+ * account, and `children` renders a second row inside the same bar, for the
+ * admin section tabs. The bar sticks to the top on every page.
+ */
+export function TopBar({
+  area = null,
+  center,
+  actions,
+  account,
+  children,
+}: {
+  area?: TopBarArea
+  center?: ReactNode
+  actions?: ReactNode
+  account?: ReactNode
+  children?: ReactNode
+}) {
   return (
-    <header className="site-bar">
-      {/* The row is a separate element so the bar itself can stay full-bleed while
-          its contents line up with the page measure below. */}
-      <div className="site-bar-inner">
-        <Brand onNavigate={() => { window.location.hash = '#/' }} />
-        {meta ?? (
-          <span className="site-bar-meta">
-            <span className="site-bar-secure">
-              <Icon name="lock" />
-              {typeof window !== 'undefined' ? window.location.host : 'Local workspace'}
-            </span>
-          </span>
-        )}
-        {children}
-        <ThemeToggle className="site-bar-theme" />
+    <header className="topbar">
+      <div className="topbar-row">
+        <Brand onNavigate={goHome} />
+        <nav className="topbar-nav" aria-label="Main">
+          <a href="#/vote" className="topbar-link" aria-current={area === 'vote' ? 'page' : undefined}>
+            Vote
+          </a>
+          <a href="#/admin" className="topbar-link" aria-current={area === 'admin' ? 'page' : undefined}>
+            Admin
+          </a>
+        </nav>
+        <div className="topbar-center">{center}</div>
+        <div className="topbar-actions">
+          {actions}
+          <ThemeToggle />
+          {account}
+        </div>
       </div>
+      {children}
     </header>
   )
 }
@@ -135,20 +166,8 @@ export function SiteFoot({ sub }: { sub: ReactNode }) {
 }
 
 /**
- * The sign-in frame.
- *
- * Two equal halves: a photograph on one side, the work on the other. The split is
- * `1fr 1fr`, so it is exactly half the width at every size rather than
- * approximately half.
- *
- * The photograph is not a picture beside the form — it is half the page, which is
- * why the brand and the promise are set on top of it and the form gets an
- * uninterrupted half to itself. It also means this frame carries no top band and
- * no footer: both would eat into the two halves the composition is built on, and
- * everything they said is already here — the wordmark is reversed out of the
- * photograph, and the footer's promise is the statement beneath it.
- *
- * `children` is the working half: the hero and then the form.
+ * The landing page frame: the shared navigation bar, the page, and a footer
+ * carrying one statement about this server and the three documents.
  */
 /**
  * Home.
@@ -178,16 +197,7 @@ export function AuthFrame({
 }) {
   return (
     <div className="landing">
-      <header className="landing-bar">
-        <div className="landing-bar-inner">
-          <Brand onNavigate={goHome} />
-          <nav className="landing-bar-nav" aria-label="Primary">
-            <a href="#/vote" className="landing-bar-link">Vote</a>
-            <a href="#/admin" className="landing-bar-link">Admin sign in</a>
-            <ThemeToggle />
-          </nav>
-        </div>
-      </header>
+      <TopBar />
 
       <main className="landing-main">{children}</main>
 

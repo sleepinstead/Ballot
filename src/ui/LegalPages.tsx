@@ -12,7 +12,7 @@
  * database is one SQLite file in `data/`, and a reader can open it.
  */
 
-import { SiteBar, SiteFoot, BackLink } from './Shell'
+import { TopBar, SiteFoot, BackLink } from './Shell'
 
 export type LegalPageId = 'legal' | 'terms' | 'privacy'
 
@@ -212,7 +212,7 @@ export function LegalPage({
 
   return (
     <div className="page-shell">
-      <SiteBar meta={<span className="site-bar-meta">{page.title}</span>} />
+      <TopBar />
 
       <main className="legal-body">
         <div className="legal-inner">
