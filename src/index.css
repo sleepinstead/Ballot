@@ -4314,8 +4314,7 @@ th[aria-sort] .table-sort-mark svg { color: var(--mark); }
    ======================================== */
 
 /*
- * Set like the header of a printed form: a thin rule of election ink across
- * the very top, the wordmark, a hairline, then the two areas of the product.
+ * Set like the header of a printed form: the wordmark, a hairline, then the two areas of the product.
  * The area you are in is underlined in ink, flush with the bar's bottom edge;
  * hovering another draws its underline in from the left. Page actions are
  * quiet text; only Exit is boxed. Nothing else moves.
@@ -4326,7 +4325,6 @@ th[aria-sort] .table-sort-mark svg { color: var(--mark); }
   top: 0;
   z-index: 40;
   background: var(--sheet);
-  border-top: 3px solid var(--mark);
   border-bottom: 1px solid var(--border);
 }
 .topbar-row {
