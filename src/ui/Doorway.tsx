@@ -119,10 +119,10 @@ function specimenCode(serial: number): string {
 /**
  * The whole vote in miniature: a paper ballot above a ballot box.
  *
- * Marking a box ticks it. Casting folds the paper down through the slot, the
- * box's count goes up by one, and a receipt rises out of the slot in the
- * paper's place: proof the ballot was counted, with nothing about the choice
- * on it. Nothing is sent anywhere. With reduced motion the same three states
+ * Marking a box ticks it. Casting folds the paper in half along its crease,
+ * slides it edge-first through the slot, drops it onto the pile inside the
+ * clear box and adds one to the count. A receipt then rises in the paper's
+ * place: proof the ballot was counted, with nothing about the choice on it. Nothing is sent anywhere. With reduced motion the same three states
  * change instantly.
  */
 function SpecimenBallot() {
@@ -141,7 +141,7 @@ function SpecimenBallot() {
     timer.current = window.setTimeout(() => {
       setStage('cast')
       setCount((current) => current + 1)
-    }, still ? 0 : 700)
+    }, still ? 0 : 1250)
   }
 
   const again = () => {
@@ -156,43 +156,27 @@ function SpecimenBallot() {
     <div className={`specimen specimen-${stage}`} role="group" aria-labelledby="specimen-title">
       <div className="specimen-stage">
         {stage !== 'cast' ? (
-          <div className="specimen-paper">
-            <div className="specimen-stub">
-              <span>Specimen ballot</span>
-              <span className="specimen-serial">No. {String(serial).padStart(6, '0')}</span>
+          stage === 'mark' ? (
+            <SpecimenSheet serial={serial} marked={marked} onMark={setMarked} onCast={cast} />
+          ) : (
+            /*
+             * The fold. Two copies of the sheet, each clipped to one half: the
+             * bottom half stays put, the top half swings down over it on the
+             * crease and shows the blank back of the paper. The whole folded
+             * ballot then tilts edge-on, narrows to the slot and slides in.
+             */
+            <div className="specimen-folding" aria-hidden="true">
+              <div className="specimen-fold-bottom">
+                <SpecimenSheet serial={serial} marked={marked} />
+              </div>
+              <div className="specimen-fold-flap">
+                <div className="specimen-fold-front">
+                  <SpecimenSheet serial={serial} marked={marked} />
+                </div>
+                <div className="specimen-fold-back" />
+              </div>
             </div>
-            <div className="specimen-head">
-              <p className="specimen-title" id="specimen-title">Student council president</p>
-              <p className="specimen-instr">Mark one box, then cast it. Nothing is recorded.</p>
-            </div>
-            <ul className="specimen-options">
-              {SPECIMEN.map((candidate, index) => (
-                <li key={candidate.name}>
-                  <button
-                    type="button"
-                    className={`specimen-option${marked === index ? ' is-marked' : ''}`}
-                    aria-pressed={marked === index}
-                    disabled={stage !== 'mark'}
-                    onClick={() => setMarked(marked === index ? null : index)}
-                  >
-                    <span className="specimen-tick" aria-hidden="true" />
-                    <span className="specimen-name">{candidate.name}</span>
-                    <span className="specimen-group">{candidate.group}</span>
-                  </button>
-                </li>
-              ))}
-            </ul>
-            <div className="specimen-foot">
-              <button
-                type="button"
-                className="btn-primary btn-block"
-                disabled={marked === null || stage !== 'mark'}
-                onClick={cast}
-              >
-                {marked === null ? 'Mark a box to cast' : 'Cast this ballot'}
-              </button>
-            </div>
-          </div>
+          )
         ) : (
           <div className="specimen-receipt-wrap">
             <div className="specimen-receipt">
@@ -246,6 +230,73 @@ function SpecimenBallot() {
       <p className="sr-only" aria-live="polite">
         {stage === 'cast' ? `Ballot cast. The box now holds ${count.toLocaleString('en-US')} ballots. Receipt code ${code}.` : ''}
       </p>
+    </div>
+  )
+}
+
+/**
+ * The specimen sheet. Interactive when it is the ballot being marked; a plain
+ * picture of the same sheet when it is one of the two halves being folded.
+ */
+function SpecimenSheet({
+  serial,
+  marked,
+  onMark,
+  onCast,
+}: {
+  serial: number
+  marked: number | null
+  onMark?: (index: number | null) => void
+  onCast?: () => void
+}) {
+  const live = Boolean(onMark && onCast)
+  return (
+    <div className="specimen-paper">
+      <div className="specimen-stub">
+        <span>Specimen ballot</span>
+        <span className="specimen-serial">No. {String(serial).padStart(6, '0')}</span>
+      </div>
+      <div className="specimen-head">
+        <p className="specimen-title" id={live ? 'specimen-title' : undefined}>Student council president</p>
+        <p className="specimen-instr">Mark one box, then cast it. Nothing is recorded.</p>
+      </div>
+      <ul className="specimen-options">
+        {SPECIMEN.map((candidate, index) => {
+          const content = (
+            <>
+              <span className="specimen-tick" aria-hidden="true" />
+              <span className="specimen-name">{candidate.name}</span>
+              <span className="specimen-group">{candidate.group}</span>
+            </>
+          )
+          const className = `specimen-option${marked === index ? ' is-marked' : ''}`
+          return (
+            <li key={candidate.name}>
+              {live ? (
+                <button
+                  type="button"
+                  className={className}
+                  aria-pressed={marked === index}
+                  onClick={() => onMark?.(marked === index ? null : index)}
+                >
+                  {content}
+                </button>
+              ) : (
+                <span className={className}>{content}</span>
+              )}
+            </li>
+          )
+        })}
+      </ul>
+      <div className="specimen-foot">
+        {live ? (
+          <button type="button" className="btn-primary btn-block" disabled={marked === null} onClick={onCast}>
+            {marked === null ? 'Mark a box to cast' : 'Cast this ballot'}
+          </button>
+        ) : (
+          <span className="btn-primary btn-block">Cast this ballot</span>
+        )}
+      </div>
     </div>
   )
 }
