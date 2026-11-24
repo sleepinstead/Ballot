@@ -4168,15 +4168,16 @@ th[aria-sort] .table-sort-mark svg { color: var(--mark); }
    Surface transition
    ======================================== */
 
-/* Only the arriving surface moves: it rises when you go in, settles when you
-   come back out to the door or a document. */
-.surface { --surface-travel: 10px; }
-.surface--in { --surface-rise: var(--surface-travel); }
-.surface--back { --surface-rise: calc(var(--surface-travel) * -1); }
-.surface--in,
-.surface--back { animation: surface-in 240ms cubic-bezier(0.2, 0, 0.2, 1); }
+/*
+ * Changing page fades the content in, and nothing else. The navigation bar is
+ * the same on every page, so it never animates: only what sits under it does.
+ * A short fade with a 4px settle.
+ */
+:is(.surface--in, .surface--back) :is(.landing-main, .app-content, .control-main, .legal-body, .signin) {
+  animation: surface-in 220ms cubic-bezier(0.2, 0, 0, 1);
+}
 @keyframes surface-in {
-  from { opacity: 0; transform: translateY(var(--surface-rise)); }
+  from { opacity: 0; transform: translateY(4px); }
   to { opacity: 1; transform: none; }
 }
 
@@ -4285,6 +4286,11 @@ th[aria-sort] .table-sort-mark svg { color: var(--mark); }
   .loading-spinner,
   .surface--in,
   .surface--back,
+  .landing-main,
+  .app-content,
+  .control-main,
+  .legal-body,
+  .signin,
   .onboarding,
   .user-menu-panel,
   .cmdk-overlay,
